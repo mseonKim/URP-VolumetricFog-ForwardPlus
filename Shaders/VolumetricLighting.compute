@@ -1,34 +1,37 @@
 #pragma enable_d3d11_debug_symbols
 #pragma kernel VolumetricLighting
 #pragma multi_compile _ _FORWARD_PLUS
+#pragma multi_compile _ ENABLE_REPROJECTION
 
 #include "./VolumetricLightingCommon.hlsl"
 
 
-#define VBUFFER_VOXEL_SIZE 8
 #define GROUP_SIZE_1D 8
 #define TILE_SIZE_CLUSTERED 32  // NOTE: This assumes the screen size == FHD (1920 * 1080)
-#define VBUFFER_SLICE_COUNT 64
-// #define FLT_MIN  1.175494351e-38
 
 RW_TEXTURE3D(float4, _VBufferLightingOutput);
 
 
-
 [numthreads(GROUP_SIZE_1D, GROUP_SIZE_1D, 1)]
 void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
-            uint2 groupId          : SV_GroupID,
-            uint2 groupThreadId    : SV_GroupThreadID,
-            int   groupIndex       : SV_GroupIndex)
+                        uint2 groupId          : SV_GroupID,
+                        uint2 groupThreadId    : SV_GroupThreadID,
+                        int   groupIndex       : SV_GroupIndex)
 {
-    uint2  pixelPos  = groupId * GROUP_SIZE_1D + groupThreadId;
-    float2 centerCoord = pixelPos + float2(0.5, 0.5);
+    // UNITY_XR_ASSIGN_VIEW_INDEX(dispatchThreadId.z);
+
+    uint2 groupOffset = groupId * GROUP_SIZE_1D;
+    uint2 voxelCoord  = groupOffset + groupThreadId;
 
     float3 F = -UNITY_MATRIX_V[2].xyz;
     float3 U = UNITY_MATRIX_V[1].xyz;
     float3 R = cross(F, U);
 
-    float3 ClipSpace = float3(centerCoord * (_ScreenSize.zw * float2(VBUFFER_VOXEL_SIZE, VBUFFER_VOXEL_SIZE)) * float2(2.0, -2.0) - float2(1.0, -1.0), 1.0);
+    float2 centerCoord = voxelCoord + float2(0.5, 0.5);
+
+    // TODO: Replace with VBufferCoordToViewDirWS
+    const float2 rcpVBufferSize = _ScreenSize.zw * _VBufferVoxelSize;
+    float3 ClipSpace = float3(centerCoord * rcpVBufferSize * float2(2.0, -2.0) - float2(1.0, -1.0), 1.0);
     float4 HViewPos = mul(unity_MatrixInvP, float4(ClipSpace, 1.0));
     float3 WorldDir = mul((float3x3)unity_MatrixInvV, HViewPos.xyz / HViewPos.w);
 
@@ -42,28 +45,30 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
     ray.centerDirWS = rayDirWS * rcpLenRayDir;
 
     float FdotD = dot(F, ray.centerDirWS);
-    float unitDistFaceSize = 0.00415f * FdotD * rcpLenRayDir;
-    // float unitDistFaceSize = _VBufferUnitDepthTexelSpacing * FdotD * rcpLenRayDir;
+    float unitDistFaceSize = _VBufferUnitDepthTexelSpacing * FdotD * rcpLenRayDir;
 
     ray.xDirDerivWS = rightDirWS * (rcpLenRightDir * unitDistFaceSize); // Normalize & rescale
     ray.yDirDerivWS = cross(ray.xDirDerivWS, ray.centerDirWS); // Will have the length of 'unitDistFaceSize' by construction
 
 #ifdef ENABLE_REPROJECTION
-    // float2 sampleOffset = _VBufferSampleOffset.xy;
-    float2 sampleOffset = float2(0.32946f, 0.08828f);
+    float2 sampleOffset = _VBufferSampleOffset.xy;
 #else
     float2 sampleOffset = 0;
 #endif
 
     ray.jitterDirWS = normalize(ray.centerDirWS + sampleOffset.x * ray.xDirDerivWS
                                                 + sampleOffset.y * ray.yDirDerivWS);
-
     float tStart = _ProjectionParams.y / dot(ray.jitterDirWS, F); // _ProjectionParams.y = Near
 
+    // We would like to determine the screen pixel (at the full resolution) which
+    // the jittered ray corresponds to. The exact solution can be obtained by intersecting
+    // the ray with the screen plane, e.i. (ViewSpace(jitterDirWS).z = 1). That's a little expensive.
+    // So, as an approximation, we ignore the curvature of the frustum.
+    uint2 pixelCoord = (uint2)((centerCoord + sampleOffset) * _VBufferVoxelSize);
 
     ray.geomDist = FLT_INF;
     ray.maxDist = FLT_INF;
-    float deviceDepth = LoadSceneDepth(centerCoord);
+    float deviceDepth = LoadSceneDepth(pixelCoord);
     if (deviceDepth > 0) // Skip the skybox
     {
         // Convert it to distance along the ray. Doesn't work with tilt shift, etc.
@@ -77,23 +82,22 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         ray.maxDist = ray.geomDist;
     }
 
+    float   t0 = max(tStart, DecodeLogarithmicDepthGeneralized(0, _VBufferDistanceDecodingParams));
+    float   de = _VBufferRcpSliceCount;
 
-    const float4 decodeDepthParams = GetDepthDecodingParam(2.0f);    // L, M, N
-
-    float   t0 = max(tStart, DecodeLogarithmicDepthGeneralized(0, decodeDepthParams));
-    float   de = rcp(VBUFFER_SLICE_COUNT); // TODO: Log-encoded distance between slices
     float3  totalRadiance = 0;
     float   opticalDepth = 0;
     float3  throughput = 1.0;
-    float   anisotropy = 0.5;
-
+    float   anisotropy = _VBufferAnisotropy;
 
     // Ray marching
     uint slice = 0;
-    for (; slice < VBUFFER_SLICE_COUNT; slice++)
+    for (; slice < _VBufferSliceCount; slice++)
     {
+        // uint3 voxelCoord3 = uint3(voxelCoord, slice + _VBufferSliceCount * unity_StereoEyeIndex);
+        uint3 voxelCoord3 = uint3(voxelCoord, slice);
         float e1 = slice * de + de; // (slice + 1) / sliceCount
-        float t1 = max(tStart, DecodeLogarithmicDepthGeneralized(e1, decodeDepthParams));
+        float t1 = max(tStart, DecodeLogarithmicDepthGeneralized(e1, _VBufferDistanceDecodingParams));
         float tNext = t1;
 
         bool containsOpaqueGeometry = IsInRange(ray.geomDist, float2(t0, t1));
@@ -109,21 +113,26 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         float dt = t1 - t0;
         if (dt <= 0.0)
         {
+            _VBufferLightingOutput[voxelCoord3] = 0;
+#ifdef ENABLE_REPROJECTION  // TODO
+            // _VBufferFeedback[voxelCoord3] = 0;
+#endif
             t0 = t1;
             continue;
         }
 
-        float  t = DecodeLogarithmicDepthGeneralized(e1 - 0.5 * de, decodeDepthParams);
+        float  t = DecodeLogarithmicDepthGeneralized(e1 - 0.5 * de, _VBufferDistanceDecodingParams);
         float3 centerWS = ray.centerDirWS * t + ray.originWS;
         float3 radiance = 0;
 
+        // TODO: float4 density = LOAD_TEXTURE3D(_VBufferDensity, voxelCoord);
         float3 scattering = 0.05;
         float extinction = 0.05;
 
         // Perform per-pixel randomization by adding an offset and then sampling uniformly
         // (in the log space) in a vein similar to Stochastic Universal Sampling:
         // https://en.wikipedia.org/wiki/Stochastic_universal_sampling
-        float perPixelRandomOffset = GenerateHashedRandomFloat(centerCoord);
+        float perPixelRandomOffset = GenerateHashedRandomFloat(voxelCoord);
 
     #ifdef ENABLE_REPROJECTION
         // This is a time-based sequence of 7 equidistant numbers from 1/14 to 13/14.
@@ -147,7 +156,7 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
 
         // Local
         {
-            VoxelLighting lighting = EvaluateVoxelLightingLocal(centerCoord, extinction, anisotropy,
+            VoxelLighting lighting = EvaluateVoxelLightingLocal(pixelCoord, extinction, anisotropy,
                                                                 ray, t0, t1, dt, centerWS, rndVal);
             aggregateLighting.radianceNoPhase  += lighting.radianceNoPhase;
             aggregateLighting.radianceComplete += lighting.radianceComplete;
@@ -157,9 +166,12 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         float phase = CornetteShanksPhasePartConstant(anisotropy); // or rcp(4.0 * PI)
         float4 blendValue = float4(aggregateLighting.radianceComplete,  extinction * dt);
         totalRadiance += throughput * scattering * (phase * blendValue.rgb);
+        
         opticalDepth += 0.5 * blendValue.a;
-
         throughput *= sampleTransmittance;
+        _VBufferLightingOutput[voxelCoord3] = LinearizeRGBD(float4(/*FastTonemap*/(totalRadiance), opticalDepth));   // * float4(GetCurrentExposureMultiplier().xxx, 1)
+
+        // opticalDepth += 0.5 * blendValue.a;
 
         if (t0 * 0.99 > ray.maxDist)
         {
@@ -168,5 +180,14 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         t0 = tNext;
     }
 
-    _VBufferLightingOutput[dispatchThreadId] = float4(totalRadiance, opticalDepth);
+    for (; slice < _VBufferSliceCount; slice++)
+    {
+        // uint3 voxelCoord = uint3(pixelCoord, slice + _VBufferSliceCount * unity_StereoEyeIndex);
+        uint3 voxelCoord3 = uint3(voxelCoord, slice);
+        _VBufferLightingOutput[voxelCoord3] = 0;
+#ifdef ENABLE_REPROJECTION
+        _VBufferLightingOutput[voxelCoord3] = 0;
+#endif
+    }
+
 }

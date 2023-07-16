@@ -7,6 +7,21 @@ real LerpWhiteTo(real b, real t) { return (1.0 - t) + b * t; }  // To prevent co
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/VolumeRendering.hlsl"
 
+CBUFFER_START(ShaderVariablesVolumetric)
+    float   _VBufferAnisotropy;
+    float   __vbuffer_pad00__;
+    float   __vbuffer_pad01__;
+    float   __vbuffer_pad02__;
+    float4  _VBufferDistanceEncodingParams;
+    float4  _VBufferDistanceDecodingParams;
+    float4  _VBufferSampleOffset;
+    float4  _VBufferViewportSize;
+    float   _VBufferVoxelSize;
+    uint    _VBufferSliceCount;
+    float   _VBufferRcpSliceCount;
+    float   _VBufferUnitDepthTexelSpacing;
+CBUFFER_END
+
 struct JitteredRay
 {
     float3 originWS;
@@ -24,16 +39,6 @@ struct VoxelLighting
     float3 radianceComplete;
     float3 radianceNoPhase;
 };
-
-float4 GetDepthDecodingParam(float c)    // TODO: Move to cpu
-{
-    float4 param;
-    param.x = rcp(c);
-    param.y = log2(c * (64.0f - _ProjectionParams.y) + 1);    // log2(c * (f - n) + 1);
-    param.z = _ProjectionParams.y - param.x;
-    param.w = 0;
-    return param;
-}
 
 bool IsInRange(float x, float2 range)
 {
@@ -81,9 +86,8 @@ VoxelLighting EvaluateVoxelLightingLocal(float2 pixelCoord, float extinction, fl
         float lightSqRadius = rcp(distanceAndSpotAttenuation.x);
         float t, distSq, rcpPdf;
         ImportanceSamplePunctualLight(rndVal, lightPositionWS, lightSqRadius,
-                                        ray.originWS, ray.jitterDirWS,
-                                        t0, t1,
-                                        t, distSq, rcpPdf);
+                                      ray.originWS, ray.jitterDirWS, t0, t1,
+                                      t, distSq, rcpPdf);
         float3 positionWS = ray.originWS + t * ray.jitterDirWS;
 
         float3 lightVector = lightPositionWS.xyz - positionWS * lightPositionWS.w;

@@ -13,21 +13,6 @@ Shader "Fog/OpaqueAtmosphericScattering"
         #include "./VolumetricLightingInput.hlsl"
         #include "./VolumetricLightingPass.hlsl"
 
-        float4 Frag(Varyings input) : SV_Target
-        {
-            // UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-            // float2 positionSS  = input.positionCS.xy;
-            // float3 clipSpace = float3(positionSS / (_ScreenParams.xy) * float2(2.0, -2.0) - float2(1.0, -1.0), 1.0);
-            // float4 HViewPos = mul(UNITY_MATRIX_I_P, float4(clipSpace, 1.0));
-            // float3 V = normalize(mul((float3x3)UNITY_MATRIX_I_V, HViewPos.xyz / HViewPos.w)); 
-            // float depth = LoadSceneDepth(positionSS);
-
-            // float3 volColor, volOpacity;
-            // AtmosphericScatteringCompute(input, V, depth, volColor, volOpacity);
-
-            // return float4(volColor, 1.0 - volOpacity.x);
-            return 0;
-        }
     ENDHLSL
 
     SubShader
@@ -46,7 +31,7 @@ Shader "Fog/OpaqueAtmosphericScattering"
             HLSLPROGRAM
                 #pragma multi_compile_fragment _ _FORWARD_PLUS
                 #pragma vertex Vert
-                #pragma fragment Frag
+                #pragma fragment FragVBuffer
             ENDHLSL
         }
 
@@ -60,6 +45,7 @@ Shader "Fog/OpaqueAtmosphericScattering"
 
             HLSLPROGRAM
                 #pragma multi_compile_fragment _ _FORWARD_PLUS
+                #pragma multi_compile_fragment _ ENABLE_REPROJECTION
                 #pragma vertex Vert
                 #pragma fragment FragPerPixel
             ENDHLSL

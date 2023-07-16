@@ -5,13 +5,10 @@ void EvaluateAtmosphericScattering(PositionInputs posInput, float3 V, out float3
 {
     color = opacity = 0;
     float fogFragDist = distance(posInput.positionWS, GetCurrentViewPosition());
-    float maxDist = 50;    // TODO: times depth
-
     float4 volFog = float4(0.0, 0.0, 0.0, 0.0);
 
-    // TODO:
-    float3 texUVW = float3(posInput.positionNDC, fogFragDist * 64 / maxDist);
-    float4 value = SAMPLE_TEXTURE3D_LOD(_VBufferLighting, s_linear_clamp_sampler, min(texUVW, float3(240, 135, 64)), 0);
+    float3 texUVW = float3(posInput.positionNDC, EncodeLogarithmicDepthGeneralized(fogFragDist, _VBufferDistanceEncodingParams));
+    float4 value = SAMPLE_TEXTURE3D_LOD(_VBufferLighting, s_linear_clamp_sampler, min(texUVW, float3(1, 1, _VBufferSliceCount)), 0);    // TODO: vbuffer size
 
     volFog = DelinearizeRGBA(float4(/*FastTonemapInvert*/(value.rgb), value.a));
 
@@ -21,7 +18,7 @@ void EvaluateAtmosphericScattering(PositionInputs posInput, float3 V, out float3
 
 void AtmosphericScatteringCompute(Varyings input, float3 V, float depth, out float3 color, out float3 opacity)
 {
-    PositionInputs posInput = GetPositionInput(input.positionCS.xy, rcp(_ScreenParams.xy), depth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
+    PositionInputs posInput = GetPositionInput(input.positionCS.xy, _ScreenSize.zw, depth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
 
     if (depth == UNITY_RAW_FAR_CLIP_VALUE)
     {
@@ -31,16 +28,31 @@ void AtmosphericScatteringCompute(Varyings input, float3 V, float depth, out flo
     EvaluateAtmosphericScattering(posInput, V, color, opacity); // Premultiplied alpha
 }
 
+float4 FragVBuffer(Varyings input) : SV_Target
+{
+    // UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+    float2 positionSS  = input.positionCS.xy;
+    float3 clipSpace = float3(positionSS * _ScreenSize.zw * float2(2.0, -2.0) - float2(1.0, -1.0), 1.0);
+    float4 HViewPos = mul(UNITY_MATRIX_I_P, float4(clipSpace, 1.0));
+    float3 V = normalize(mul((float3x3)UNITY_MATRIX_I_V, HViewPos.xyz / HViewPos.w)); 
+    float depth = LoadSceneDepth(positionSS);
+
+    float3 volColor, volOpacity;
+    AtmosphericScatteringCompute(input, V, depth, volColor, volOpacity);
+
+    return float4(volColor, 1.0 - volOpacity.x);
+    // return 0;
+}
+
 float4 FragPerPixel(Varyings input) : SV_Target
 {
-    #define VBUFFER_SLICE_COUNT 128
     // UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
     float3 F = -UNITY_MATRIX_V[2].xyz;
     float3 U = UNITY_MATRIX_V[1].xyz;
     float3 R = cross(F, U);
     
-    float3 ClipSpace = float3((input.positionCS.xy / float2(_ScreenParams.xy))*float2(2.0, -2.0) - float2(1.0, -1.0), 1.0);
+    float3 ClipSpace = float3(input.positionCS.xy * _ScreenSize.zw * float2(2.0, -2.0) - float2(1.0, -1.0), 1.0);
     float4 HViewPos = mul(unity_MatrixInvP, float4(ClipSpace, 1.0));
     float3 WorldDir = mul((float3x3)unity_MatrixInvV, HViewPos.xyz / HViewPos.w);
 
@@ -54,28 +66,30 @@ float4 FragPerPixel(Varyings input) : SV_Target
     ray.centerDirWS = rayDirWS * rcpLenRayDir;
 
     float FdotD = dot(F, ray.centerDirWS);
-    float unitDistFaceSize = 0.00415f * FdotD * rcpLenRayDir;
-    // float unitDistFaceSize = _VBufferUnitDepthTexelSpacing * FdotD * rcpLenRayDir;
+    float unitDistFaceSize = _VBufferUnitDepthTexelSpacing * FdotD * rcpLenRayDir;
 
     ray.xDirDerivWS = rightDirWS * (rcpLenRightDir * unitDistFaceSize); // Normalize & rescale
     ray.yDirDerivWS = cross(ray.xDirDerivWS, ray.centerDirWS); // Will have the length of 'unitDistFaceSize' by construction
 
 #ifdef ENABLE_REPROJECTION
-    // float2 sampleOffset = _VBufferSampleOffset.xy;
-    float2 sampleOffset = float2(0.32946f, 0.08828f);
+    float2 sampleOffset = _VBufferSampleOffset.xy;
 #else
     float2 sampleOffset = 0;
 #endif
 
     ray.jitterDirWS = normalize(ray.centerDirWS + sampleOffset.x * ray.xDirDerivWS
                                                 + sampleOffset.y * ray.yDirDerivWS);
-
     float tStart = _ProjectionParams.y / dot(ray.jitterDirWS, F); // _ProjectionParams.y = Near
 
+    // We would like to determine the screen pixel (at the full resolution) which
+    // the jittered ray corresponds to. The exact solution can be obtained by intersecting
+    // the ray with the screen plane, e.i. (ViewSpace(jitterDirWS).z = 1). That's a little expensive.
+    // So, as an approximation, we ignore the curvature of the frustum.
+    uint2 pixelCoord = (uint2)((input.positionCS.xy + sampleOffset));
 
     ray.geomDist = FLT_INF;
     ray.maxDist = FLT_INF;
-    float deviceDepth = LoadSceneDepth(input.positionCS.xy);
+    float deviceDepth = LoadSceneDepth(pixelCoord);
     if (deviceDepth > 0) // Skip the skybox
     {
         // Convert it to distance along the ray. Doesn't work with tilt shift, etc.
@@ -89,23 +103,20 @@ float4 FragPerPixel(Varyings input) : SV_Target
         ray.maxDist = ray.geomDist;
     }
 
-
-    const float4 decodeDepthParams = GetDepthDecodingParam(2.0f);    // L, M, N
-
-    float   t0 = max(tStart, DecodeLogarithmicDepthGeneralized(0, decodeDepthParams));
-    float   de = rcp(VBUFFER_SLICE_COUNT); // TODO: Log-encoded distance between slices
+    float   t0 = max(tStart, DecodeLogarithmicDepthGeneralized(0, _VBufferDistanceDecodingParams));
+    float   de = _VBufferRcpSliceCount;
+    
     float3  totalRadiance = 0;
     float   opticalDepth = 0;
     float3  throughput = 1.0;
-    float   anisotropy = 0.5;
-
+    float   anisotropy = _VBufferAnisotropy;
 
     // Ray marching
     uint slice = 0;
-    for (; slice < VBUFFER_SLICE_COUNT; slice++)
+    for (; slice < _VBufferSliceCount; slice++)
     {
         float e1 = slice * de + de; // (slice + 1) / sliceCount
-        float t1 = max(tStart, DecodeLogarithmicDepthGeneralized(e1, decodeDepthParams));
+        float t1 = max(tStart, DecodeLogarithmicDepthGeneralized(e1, _VBufferDistanceDecodingParams));
         float tNext = t1;
 
         bool containsOpaqueGeometry = IsInRange(ray.geomDist, float2(t0, t1));
@@ -125,7 +136,7 @@ float4 FragPerPixel(Varyings input) : SV_Target
             continue;
         }
 
-        float  t = DecodeLogarithmicDepthGeneralized(e1 - 0.5 * de, decodeDepthParams);
+        float  t = DecodeLogarithmicDepthGeneralized(e1 - 0.5 * de, _VBufferDistanceDecodingParams);
         float3 centerWS = ray.centerDirWS * t + ray.originWS;
         float3 radiance = 0;
 
@@ -159,7 +170,7 @@ float4 FragPerPixel(Varyings input) : SV_Target
 
         // Local
         {
-            VoxelLighting lighting = EvaluateVoxelLightingLocal(input.positionCS.xy, extinction, anisotropy,
+            VoxelLighting lighting = EvaluateVoxelLightingLocal(pixelCoord, extinction, anisotropy,
                                                                 ray, t0, t1, dt, centerWS, rndVal);
             aggregateLighting.radianceNoPhase  += lighting.radianceNoPhase;
             aggregateLighting.radianceComplete += lighting.radianceComplete;
@@ -172,6 +183,8 @@ float4 FragPerPixel(Varyings input) : SV_Target
 
         throughput *= sampleTransmittance;
 
+        // opticalDepth += 0.5 * blendValue.a;
+
         if (t0 * 0.99 > ray.maxDist)
         {
             break;
@@ -179,7 +192,6 @@ float4 FragPerPixel(Varyings input) : SV_Target
         t0 = tNext;
     }
 
-    #undef VBUFFER_SLICE_COUNT
     return float4(totalRadiance, opticalDepth);
 }
 

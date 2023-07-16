@@ -12,8 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 95181498d1558634e9f54e8d91ba0890, type: 3}
   m_Name: Volumetric Config
   m_EditorClassIdentifier: 
-  volumetricLightingCS: {fileID: 0}
-  volumetricLightingFilteringCS: {fileID: 0}
-  resolveMat: {fileID: 0}
+  volumetricLightingCS: {fileID: 7200000, guid: 633f6c93e531b7649877f1ee6af81206,
+    type: 3}
+  volumetricLightingFilteringCS: {fileID: 7200000, guid: e7c6734610ba8774789df5bebb773484,
+    type: 3}
+  resolveMat: {fileID: 2100000, guid: 2acfffc3c62e9b24b813c8247c7ab5b7, type: 2}
+  fogControlMode: 0
+  anisotropy: 0.4
   useVolumetricLighting: 1
-  voxelSize: 8
+  voxelMode: 1
+  depthExtent: 64
+  screenResolutionPercentage: 12.5
+  volumeSliceCount: 128
+  denoiseMode: 0
+  sampleOffsetWeight: 0.001
+  sliceDistributionUniformity: 0

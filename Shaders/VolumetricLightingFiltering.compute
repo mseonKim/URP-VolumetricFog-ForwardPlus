@@ -7,17 +7,24 @@
 
 #pragma kernel FilterVolumetricLighting
 
+#pragma multi_compile _ NEED_SEPARATE_OUTPUT
+
 //--------------------------------------------------------------------------------------------------
 // Included headers
 //--------------------------------------------------------------------------------------------------
 
-#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+#include "./VolumetricLightingCommon.hlsl"
 
 //--------------------------------------------------------------------------------------------------
 // Inputs & outputs
 //--------------------------------------------------------------------------------------------------
 
+#if NEED_SEPARATE_OUTPUT
+TEXTURE3D(_VBufferLighting);
+RW_TEXTURE3D(float4, _VBufferLightingFiltered);
+#else
 RW_TEXTURE3D(float4, _VBufferLighting);
+#endif
 
 #define GAUSSIAN_SIGMA 1.0
 #define GROUP_SIZE_1D_XY 8
@@ -53,8 +60,8 @@ void PrefetchData(uint groupIndex, uint2 groupOrigin, uint sliceIndex)
         int offsetX = sampleID % FILTER_SIZE_1D;
         int offsetY = sampleID / FILTER_SIZE_1D;
 
-        int3 sampleCoord = int3(clamp(originXY.x + offsetX, 0, 240 - 1), // _VBufferViewportSize.x
-                                clamp(originXY.y + offsetY, 0, 135 - 1), // _VBufferViewportSize.y
+        int3 sampleCoord = int3(clamp(originXY.x + offsetX, 0, _VBufferViewportSize.x - 1),
+                                clamp(originXY.y + offsetY, 0, _VBufferViewportSize.y - 1),
                                 sliceIndex);
 
         float4 sampleVal = _VBufferLighting[sampleCoord];
@@ -69,7 +76,11 @@ void PrefetchData(uint groupIndex, uint2 groupOrigin, uint sliceIndex)
 
 void WriteOutput(uint3 voxelCoord, float4 value)
 {
+#if NEED_SEPARATE_OUTPUT
+    _VBufferLightingFiltered[voxelCoord] = value;
+#else
     _VBufferLighting[voxelCoord] = value;
+#endif
 }
 
 float Gaussian(float radius, float sigma)

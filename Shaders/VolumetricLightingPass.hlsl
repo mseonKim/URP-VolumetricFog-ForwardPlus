@@ -7,8 +7,8 @@ void EvaluateAtmosphericScattering(PositionInputs posInput, float3 V, out float3
     float fogFragDist = distance(posInput.positionWS, GetCurrentViewPosition());
     float4 volFog = float4(0.0, 0.0, 0.0, 0.0);
 
-    float3 texUVW = float3(posInput.positionNDC, EncodeLogarithmicDepthGeneralized(fogFragDist, _VBufferDistanceEncodingParams));
-    float4 value = SAMPLE_TEXTURE3D_LOD(_VBufferLighting, s_linear_clamp_sampler, min(texUVW, float3(1, 1, _VBufferSliceCount)), 0);    // TODO: vbuffer size
+    float3 texUVW = float3(posInput.positionNDC, EncodeLogarithmicDepthGeneralized(fogFragDist, _VBufferDistanceEncodingParams)) * _VBufferLightingViewportScale;
+    float4 value = SAMPLE_TEXTURE3D_LOD(_VBufferLighting, s_linear_clamp_sampler, min(texUVW, _VBufferLightingViewportLimit), 0);
 
     volFog = DelinearizeRGBA(float4(/*FastTonemapInvert*/(value.rgb), value.a));
 

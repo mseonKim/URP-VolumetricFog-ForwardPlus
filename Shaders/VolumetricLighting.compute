@@ -10,7 +10,7 @@
 #define TILE_SIZE_CLUSTERED 32  // NOTE: This assumes the screen size == FHD (1920 * 1080)
 
 RW_TEXTURE3D(float4, _VBufferLightingOutput);
-
+SAMPLER(s_point_clamp_sampler);
 
 [numthreads(GROUP_SIZE_1D, GROUP_SIZE_1D, 1)]
 void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
@@ -64,7 +64,10 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
     // the jittered ray corresponds to. The exact solution can be obtained by intersecting
     // the ray with the screen plane, e.i. (ViewSpace(jitterDirWS).z = 1). That's a little expensive.
     // So, as an approximation, we ignore the curvature of the frustum.
-    uint2 pixelCoord = (uint2)((centerCoord + sampleOffset) * _VBufferVoxelSize);
+    uint2 pixelCoord = (uint2)((voxelCoord + 0.5 + sampleOffset) * _VBufferVoxelSize);
+
+    // Do not jitter 'voxelCoord' else. It's expected to correspond to the center of the voxel.
+    PositionInputs posInput = GetPositionInput(voxelCoord, _VBufferViewportSize.zw);
 
     ray.geomDist = FLT_INF;
     ray.maxDist = FLT_INF;
@@ -75,11 +78,12 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         float linearDepth = LinearEyeDepth(deviceDepth, _ZBufferParams);
         ray.geomDist = linearDepth * rcp(dot(ray.jitterDirWS, F));
 
+        float2 UV = posInput.positionNDC * _RTHandleScale.xy;
+
         // This should really be using a max sampler here. This is a bit overdilating given that it is already dilated.
         // Better to be safer though.
-        // float4 d = GATHER_RED_TEXTURE2D_X(_MaxZMaskTexture, s_point_clamp_sampler, UV) * rcp(dot(ray.jitterDirWS, F));
-        // ray.maxDist = max(Max3(d.x, d.y, d.z), d.w);
-        ray.maxDist = ray.geomDist;
+        float4 d = GATHER_RED_TEXTURE2D_X(_MaxZMaskTexture, s_point_clamp_sampler, UV) * rcp(dot(ray.jitterDirWS, F));
+        ray.maxDist = max(Max3(d.x, d.y, d.z), d.w);
     }
 
     float   t0 = max(tStart, DecodeLogarithmicDepthGeneralized(0, _VBufferDistanceDecodingParams));
@@ -95,7 +99,7 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
     for (; slice < _VBufferSliceCount; slice++)
     {
         // uint3 voxelCoord3 = uint3(voxelCoord, slice + _VBufferSliceCount * unity_StereoEyeIndex);
-        uint3 voxelCoord3 = uint3(voxelCoord, slice);
+        uint3 voxelCoord3 = uint3(posInput.positionSS, slice);
         float e1 = slice * de + de; // (slice + 1) / sliceCount
         float t1 = max(tStart, DecodeLogarithmicDepthGeneralized(e1, _VBufferDistanceDecodingParams));
         float tNext = t1;
@@ -122,7 +126,7 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         }
 
         float  t = DecodeLogarithmicDepthGeneralized(e1 - 0.5 * de, _VBufferDistanceDecodingParams);
-        float3 centerWS = ray.centerDirWS * t + ray.originWS;
+        float3 centerWS = ray.originWS + t * ray.centerDirWS;
         float3 radiance = 0;
 
         // TODO: float4 density = LOAD_TEXTURE3D(_VBufferDensity, voxelCoord);
@@ -171,7 +175,7 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         throughput *= sampleTransmittance;
         _VBufferLightingOutput[voxelCoord3] = LinearizeRGBD(float4(/*FastTonemap*/(totalRadiance), opticalDepth));   // * float4(GetCurrentExposureMultiplier().xxx, 1)
 
-        // opticalDepth += 0.5 * blendValue.a;
+        opticalDepth += 0.5 * blendValue.a;
 
         if (t0 * 0.99 > ray.maxDist)
         {
@@ -183,7 +187,7 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
     for (; slice < _VBufferSliceCount; slice++)
     {
         // uint3 voxelCoord = uint3(pixelCoord, slice + _VBufferSliceCount * unity_StereoEyeIndex);
-        uint3 voxelCoord3 = uint3(voxelCoord, slice);
+        uint3 voxelCoord3 = uint3(posInput.positionSS, slice);
         _VBufferLightingOutput[voxelCoord3] = 0;
 #ifdef ENABLE_REPROJECTION
         _VBufferLightingOutput[voxelCoord3] = 0;

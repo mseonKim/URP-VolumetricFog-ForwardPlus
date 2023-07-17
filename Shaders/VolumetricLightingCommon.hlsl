@@ -12,6 +12,8 @@ CBUFFER_START(ShaderVariablesVolumetric)
     float   __vbuffer_pad00__;
     float   __vbuffer_pad01__;
     float   __vbuffer_pad02__;
+    float4  _VBufferLightingViewportScale;
+    float4  _VBufferLightingViewportLimit;
     float4  _VBufferDistanceEncodingParams;
     float4  _VBufferDistanceDecodingParams;
     float4  _VBufferSampleOffset;
@@ -20,7 +22,10 @@ CBUFFER_START(ShaderVariablesVolumetric)
     uint    _VBufferSliceCount;
     float   _VBufferRcpSliceCount;
     float   _VBufferUnitDepthTexelSpacing;
+    float4  _RTHandleScale;
 CBUFFER_END
+
+TEXTURE2D(_MaxZMaskTexture);
 
 struct JitteredRay
 {

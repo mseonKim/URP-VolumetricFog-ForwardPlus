@@ -37,6 +37,7 @@ namespace UniversalForwardPlusVolumetric
         [Header("Resources")]
         public ComputeShader volumetricLightingCS;
         public ComputeShader volumetricLightingFilteringCS;
+        public ComputeShader generateMaxZCS;
         public Material resolveMat;
 
         [Header("Fog")]
@@ -52,7 +53,10 @@ namespace UniversalForwardPlusVolumetric
         public float screenResolutionPercentage = 12.5f;
         [Tooltip("Controls the number of slices to use the volumetric buffer (3D texture) along the camera's focal axis.")]
         public int volumeSliceCount = 64;
+
         public DenoiseMode denoiseMode = DenoiseMode.Gaussian;
+        public bool filterVolume => (denoiseMode == DenoiseMode.Gaussian || denoiseMode == DenoiseMode.Both);
+        
         [Range(0.001f, 1f)]
         public float sampleOffsetWeight = 1f;
         [Tooltip("Controls the distribution of slices along the Camera's focal axis. 0 is exponential distribution and 1 is linear distribution.")]

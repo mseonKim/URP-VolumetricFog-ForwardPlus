@@ -109,9 +109,10 @@ namespace UniversalForwardPlusVolumetric
         }
     }
 
-    public class VolumetricUtils
+    public static class VolumetricUtils
     {
         private const float k_OptimalFogScreenResolutionPercentage = (1.0f / 8.0f) * 100;
+        public static int DivRoundUp(int x, int y) => (x + y - 1) / y;
 
         public static void ComputeVolumetricFogSliceCountAndScreenFraction(VolumetricConfig config, out int sliceCount, out float screenFraction)
         {

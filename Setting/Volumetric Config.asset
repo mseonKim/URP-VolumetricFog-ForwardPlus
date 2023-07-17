@@ -16,6 +16,7 @@ MonoBehaviour:
     type: 3}
   volumetricLightingFilteringCS: {fileID: 7200000, guid: e7c6734610ba8774789df5bebb773484,
     type: 3}
+  generateMaxZCS: {fileID: 7200000, guid: ef07e1cecfcf17849b9dabc5c283c5d1, type: 3}
   resolveMat: {fileID: 2100000, guid: 2acfffc3c62e9b24b813c8247c7ab5b7, type: 2}
   fogControlMode: 0
   anisotropy: 0.4
@@ -23,7 +24,7 @@ MonoBehaviour:
   voxelMode: 1
   depthExtent: 64
   screenResolutionPercentage: 12.5
-  volumeSliceCount: 128
-  denoiseMode: 0
+  volumeSliceCount: 170
+  denoiseMode: 2
   sampleOffsetWeight: 0.001
-  sliceDistributionUniformity: 0
+  sliceDistributionUniformity: 1

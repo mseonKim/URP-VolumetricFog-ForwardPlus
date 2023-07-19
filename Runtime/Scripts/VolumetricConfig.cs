@@ -56,6 +56,7 @@ namespace UniversalForwardPlusVolumetric
 
         public DenoiseMode denoiseMode = DenoiseMode.Gaussian;
         public bool filterVolume => (denoiseMode == DenoiseMode.Gaussian || denoiseMode == DenoiseMode.Both);
+        public bool enableReprojection => (denoiseMode == DenoiseMode.Reprojection || denoiseMode == DenoiseMode.Both);
         
         [Range(0.001f, 1f)]
         public float sampleOffsetWeight = 1f;

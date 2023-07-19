@@ -10,9 +10,13 @@ namespace UniversalForwardPlusVolumetric
         private static class IDs
         {
             public static int _VBufferLighting = Shader.PropertyToID("_VBufferLighting");
-            public static int _VBufferLightingOutput = Shader.PropertyToID("_VBufferLightingOutput");
             public static int _VBufferLightingFiltered = Shader.PropertyToID("_VBufferLightingFiltered");
+            public static int _VBufferFeedback = Shader.PropertyToID("_VBufferFeedback");
+            public static int _VBufferHistory = Shader.PropertyToID("_VBufferHistory");
             public static int _VBufferAnisotropy = Shader.PropertyToID("_VBufferAnisotropy");
+            public static int _CornetteShanksConstant = Shader.PropertyToID("_CornetteShanksConstant");
+            public static int _VBufferHistoryIsValid = Shader.PropertyToID("_VBufferHistoryIsValid");
+            public static int _VolumetricFilteringEnabled = Shader.PropertyToID("_VolumetricFilteringEnabled");
             public static int _VBufferVoxelSize = Shader.PropertyToID("_VBufferVoxelSize");
             public static int _VBufferViewportSize = Shader.PropertyToID("_VBufferViewportSize");
             public static int _VBufferSliceCount = Shader.PropertyToID("_VBufferSliceCount");
@@ -23,6 +27,7 @@ namespace UniversalForwardPlusVolumetric
             public static int _VBufferDistanceEncodingParams = Shader.PropertyToID("_VBufferDistanceEncodingParams");
             public static int _VBufferDistanceDecodingParams = Shader.PropertyToID("_VBufferDistanceDecodingParams");
             public static int _VBufferSampleOffset = Shader.PropertyToID("_VBufferSampleOffset");
+            public static int _PrevCamPosRWS = Shader.PropertyToID("_PrevCamPosRWS");
             public static int _RTHandleScale = Shader.PropertyToID("_RTHandleScale");
         }
         private static int s_VBufferLightingCSKernal;
@@ -34,11 +39,15 @@ namespace UniversalForwardPlusVolumetric
         private Material m_ResolveMat;
         private RTHandle m_VBufferLightingHandle;
         private RTHandle m_VBufferLightingFilteredHandle;
+        private RTHandle[] m_VolumetricHistoryBuffers;
         private VBufferParameters m_VBufferParameters;
 
         private Vector2[] m_xySeq;
         private bool m_FilteringNeedsExtraBuffer;
+        private bool m_HistoryBufferAllocated;
+        private bool m_VBufferHistoryIsValid;
         private int m_FrameIndex;
+        private Vector3 m_PrevCamPosRWS;
         private ProfilingSampler m_ProfilingSampler;
 
         public FPVolumetricLightingPass()
@@ -71,6 +80,7 @@ namespace UniversalForwardPlusVolumetric
             ConfigureInput(ScriptableRenderPassInput.Depth);
 
             var vBufferViewportSize = m_VBufferParameters.viewportSize;
+            var camera = renderingData.cameraData.camera;
 
             // Create render texture
             var desc = new RenderTextureDescriptor(vBufferViewportSize.x, vBufferViewportSize.y, RenderTextureFormat.ARGBHalf, 0);
@@ -81,14 +91,26 @@ namespace UniversalForwardPlusVolumetric
 
             m_FilteringNeedsExtraBuffer = !(SystemInfo.IsFormatSupported(GraphicsFormat.R16G16B16A16_SFloat, FormatUsage.LoadStore));
 
+            // Filtering
             if (m_Config.filterVolume && m_FilteringNeedsExtraBuffer)
             {
                 RenderingUtils.ReAllocateIfNeeded(ref m_VBufferLightingFilteredHandle, desc, FilterMode.Trilinear, name:"VBufferLightingFiltered");
                 CoreUtils.SetKeyword(m_VolumetricLightingFilteringCS, "NEED_SEPARATE_OUTPUT", m_FilteringNeedsExtraBuffer);
             }
 
+            // History buffer
+            if (NeedHistoryBufferAllocation())
+            {
+                DestroyHistoryBuffers();
+                if (m_Config.enableReprojection)
+                {
+                    CreateHistoryBuffers(camera);
+                }
+                m_HistoryBufferAllocated = m_Config.enableReprojection;
+            }
+
             // Set shader variables
-            SetShaderVariables(cmd, renderingData.cameraData.camera);
+            SetShaderVariables(cmd, camera);
 
             s_VBufferLightingCSKernal = m_VolumetricLightingCS.FindKernel("VolumetricLighting");
             s_VBufferFilteringCSKernal = m_VolumetricLightingFilteringCS.FindKernel("FilterVolumetricLighting");
@@ -105,7 +127,10 @@ namespace UniversalForwardPlusVolumetric
             var xySeqOffset = new Vector4();
             xySeqOffset.Set(m_xySeq[sampleIndex].x * m_Config.sampleOffsetWeight, m_xySeq[sampleIndex].y * m_Config.sampleOffsetWeight, VolumetricUtils.zSeq[sampleIndex], m_FrameIndex);
 
+            cmd.SetGlobalInt(IDs._VolumetricFilteringEnabled, m_Config.filterVolume ? 1 : 0);
+            cmd.SetGlobalInt(IDs._VBufferHistoryIsValid, (m_Config.enableReprojection && m_VBufferHistoryIsValid) ? 1 : 0);
             cmd.SetGlobalFloat(IDs._VBufferAnisotropy, m_Config.anisotropy);
+            cmd.SetGlobalFloat(IDs._CornetteShanksConstant, VolumetricUtils.CornetteShanksPhasePartConstant(m_Config.anisotropy));
             cmd.SetGlobalFloat(IDs._VBufferVoxelSize, m_VBufferParameters.voxelSize);
             cmd.SetGlobalVector(IDs._VBufferViewportSize, new Vector4(vBufferViewportSize.x, vBufferViewportSize.y, 1.0f / vBufferViewportSize.x, 1.0f / vBufferViewportSize.y));
             cmd.SetGlobalInt(IDs._VBufferSliceCount, vBufferViewportSize.z);
@@ -119,18 +144,16 @@ namespace UniversalForwardPlusVolumetric
             cmd.SetGlobalTexture(IDs._VBufferLighting, m_VBufferLightingHandle);
             cmd.SetGlobalVector(IDs._RTHandleScale, RTHandles.rtHandleProperties.rtHandleScale);
 
-            bool useReprojection = (m_Config.denoiseMode == DenoiseMode.Reprojection || m_Config.denoiseMode == DenoiseMode.Both);
-            CoreUtils.SetKeyword(cmd, "ENABLE_REPROJECTION", useReprojection);
+            CoreUtils.SetKeyword(m_VolumetricLightingCS, "ENABLE_REPROJECTION", m_Config.enableReprojection);
+            CoreUtils.SetKeyword(m_VolumetricLightingCS, "ENABLE_ANISOTROPY", m_Config.anisotropy != 0f);
         }
 
 
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
-            if (++m_FrameIndex >= 14)
-            {
-                m_FrameIndex = 0;
-            }
+            m_FrameIndex = (m_FrameIndex + 1) % 14;
 
+            var camera = renderingData.cameraData.camera;
             var cmd = CommandBufferPool.Get();
             using (new ProfilingScope(cmd, m_ProfilingSampler))
             {
@@ -142,14 +165,20 @@ namespace UniversalForwardPlusVolumetric
 
                 if (m_VolumetricLightingCS != null
                     && m_VolumetricLightingFilteringCS != null
-                    && Shader.GetGlobalTexture("_CameraDepthTexture") != null   // To prevent error log
-                    // && Shader.GetGlobalTexture("_MaxZMaskTexture") != null
-                    )
+                    && Shader.GetGlobalTexture("_CameraDepthTexture") != null)   // To prevent error log
                 {
                     // The shader defines GROUP_SIZE_1D = 8.
                     int width = ((int)vBufferViewportSize.x + 7) / 8;
                     int height = ((int)vBufferViewportSize.y + 7) / 8;
-                    cmd.SetComputeTextureParam(m_VolumetricLightingCS, s_VBufferLightingCSKernal, IDs._VBufferLightingOutput, m_VBufferLightingHandle);
+                    cmd.SetComputeTextureParam(m_VolumetricLightingCS, s_VBufferLightingCSKernal, IDs._VBufferLighting, m_VBufferLightingHandle);
+                    if (m_Config.enableReprojection)
+                    {
+                        var currIdx = (m_FrameIndex + 0) & 1;
+                        var prevIdx = (m_FrameIndex + 1) & 1;
+                        cmd.SetComputeVectorParam(m_VolumetricLightingCS, IDs._PrevCamPosRWS, m_PrevCamPosRWS);
+                        cmd.SetComputeTextureParam(m_VolumetricLightingCS, s_VBufferLightingCSKernal, IDs._VBufferFeedback, m_VolumetricHistoryBuffers[currIdx]);
+                        cmd.SetComputeTextureParam(m_VolumetricLightingCS, s_VBufferLightingCSKernal, IDs._VBufferHistory, m_VolumetricHistoryBuffers[prevIdx]);
+                    }
                     cmd.DispatchCompute(m_VolumetricLightingCS, s_VBufferLightingCSKernal, width, height, 1);
 
                     if (m_Config.filterVolume)
@@ -183,10 +212,69 @@ namespace UniversalForwardPlusVolumetric
 
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
+
+            if (m_Config.enableReprojection && !m_VBufferHistoryIsValid)
+            {
+                m_VBufferHistoryIsValid = true;
+            }
+            m_PrevCamPosRWS = camera.transform.position;
         }
 
         public override void OnCameraCleanup(CommandBuffer cmd)
         {
+        }
+
+        private void CreateHistoryBuffers(Camera camera)
+        {
+            if (!m_Config.useVolumetricLighting || !CoreUtils.IsSceneViewFogEnabled(camera))
+                return;
+            
+            Debug.Assert(m_VolumetricHistoryBuffers == null);
+
+            m_VolumetricHistoryBuffers = new RTHandle[2];
+            var viewportSize = m_VBufferParameters.viewportSize;
+
+            for (int i = 0; i < 2; i++)
+            {
+                m_VolumetricHistoryBuffers[i] = RTHandles.Alloc(viewportSize.x, viewportSize.y, viewportSize.z, colorFormat: GraphicsFormat.R16G16B16A16_SFloat,
+                    dimension: TextureDimension.Tex3D, enableRandomWrite: true, name: string.Format("VBufferHistory{0}", i));
+            }
+
+            m_VBufferHistoryIsValid = false;
+        }
+
+        private void DestroyHistoryBuffers()
+        {
+            if (m_VolumetricHistoryBuffers == null)
+                return;
+
+            for (int i = 0; i < 2; i++)
+            {
+                RTHandles.Release(m_VolumetricHistoryBuffers[i]);
+            }
+
+            m_VolumetricHistoryBuffers = null;
+            m_VBufferHistoryIsValid = false;
+        }
+
+        private bool NeedHistoryBufferAllocation()
+        {
+            if (!m_Config.useVolumetricLighting || !m_Config.enableReprojection)
+                return false;
+            
+            if (m_VolumetricHistoryBuffers == null)
+                return true;
+
+            if (m_HistoryBufferAllocated != m_Config.enableReprojection)
+                return true;
+
+            var viewportSize = m_VBufferParameters.viewportSize;
+            if (m_VolumetricHistoryBuffers[0].rt.width != viewportSize.x ||
+                m_VolumetricHistoryBuffers[0].rt.height != viewportSize.y ||
+                m_VolumetricHistoryBuffers[0].rt.volumeDepth != viewportSize.z)
+                return true;
+            
+            return false;
         }
     }
 }

@@ -1,6 +1,8 @@
 #ifndef UNITY_VBUFFER_INCLUDED
 #define UNITY_VBUFFER_INCLUDED
 
+#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Filtering.hlsl"
+
 // if (quadraticFilterXY), we perform biquadratic (3x3) reconstruction for each slice to reduce
 // aliasing at the cost of extra ALUs and bandwidth.
 // Warning: you MUST pass a linear sampler in order for the quadratic filter to work.

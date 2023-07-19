@@ -19,12 +19,12 @@ MonoBehaviour:
   generateMaxZCS: {fileID: 7200000, guid: ef07e1cecfcf17849b9dabc5c283c5d1, type: 3}
   resolveMat: {fileID: 2100000, guid: 2acfffc3c62e9b24b813c8247c7ab5b7, type: 2}
   fogControlMode: 0
-  anisotropy: 0.4
+  anisotropy: 0
   useVolumetricLighting: 1
   voxelMode: 1
   depthExtent: 64
-  screenResolutionPercentage: 12.5
+  screenResolutionPercentage: 25
   volumeSliceCount: 170
-  denoiseMode: 2
+  denoiseMode: 1
   sampleOffsetWeight: 0.001
-  sliceDistributionUniformity: 1
+  sliceDistributionUniformity: 0

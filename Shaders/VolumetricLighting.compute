@@ -2,15 +2,63 @@
 #pragma kernel VolumetricLighting
 #pragma multi_compile _ _FORWARD_PLUS
 #pragma multi_compile _ ENABLE_REPROJECTION
+#pragma multi_compile _ ENABLE_ANISOTROPY
 
 #include "./VolumetricLightingCommon.hlsl"
+#include "./VBuffer.hlsl"
 
 
 #define GROUP_SIZE_1D 8
 #define TILE_SIZE_CLUSTERED 32  // NOTE: This assumes the screen size == FHD (1920 * 1080)
 
-RW_TEXTURE3D(float4, _VBufferLightingOutput);
+float4 _PrevCamPosRWS;
+RW_TEXTURE3D(float4, _VBufferLighting);
+RW_TEXTURE3D(float4, _VBufferFeedback);
+TEXTURE3D(_VBufferHistory);
+// TEXTURE3D(_VBufferDensity);                     // RGB = scattering, A = extinction
+TEXTURE2D(_MaxZMaskTexture);
 SAMPLER(s_point_clamp_sampler);
+SAMPLER(s_linear_clamp_sampler);
+
+float ComputeHistoryWeight()
+{
+    // Compute the exponential moving average over 'n' frames:
+    // X = (1 - a) * ValueAtFrame[n] + a * AverageOverPreviousFrames.
+    // We want each sample to be uniformly weighted by (1 / n):
+    // X = (1 / n) * Sum{i from 1 to n}{ValueAtFrame[i]}.
+    // Therefore, we get:
+    // (1 - a) = (1 / n) => a = (1 - 1 / n) = (n - 1) / n,
+    // X = (1 / n) * ValueAtFrame[n] + (1 - 1 / n) * AverageOverPreviousFrames.
+    // Why does it work? We need to make the following assumption:
+    // AverageOverPreviousFrames ≈ AverageOverFrames[n - 1].
+    // AverageOverFrames[n - 1] = (1 / (n - 1)) * Sum{i from 1 to n - 1}{ValueAtFrame[i]}.
+    // This implies that the reprojected (accumulated) value has mostly converged.
+    // X = (1 / n) * ValueAtFrame[n] + ((n - 1) / n) * (1 / (n - 1)) * Sum{i from 1 to n - 1}{ValueAtFrame[i]}.
+    // X = (1 / n) * ValueAtFrame[n] + (1 / n) * Sum{i from 1 to n - 1}{ValueAtFrame[i]}.
+    // X = Sum{i from 1 to n}{ValueAtFrame[i] / n}.
+    float numFrames     = 7;
+    float frameWeight   = 1 / numFrames;
+    float historyWeight = 1 - frameWeight;
+
+    return historyWeight;
+}
+
+float GetInversePreviousExposureMultiplier()
+{
+    return 1.0;
+    // float exposure = GetPreviousExposureMultiplier();
+    // return rcp(exposure + (exposure == 0.0)); // zero-div guard
+}
+float GetCurrentExposureMultiplier()
+{
+    return 1.0;
+// #if SHADEROPTIONS_PRE_EXPOSITION
+//     // _ProbeExposureScale is a scale used to perform range compression to avoid saturation of the content of the probes. It is 1.0 if we are not rendering probes.
+//     return LOAD_TEXTURE2D(_ExposureTexture, int2(0, 0)).x * _ProbeExposureScale;
+// #else
+//     return _ProbeExposureScale;
+// #endif
+}
 
 [numthreads(GROUP_SIZE_1D, GROUP_SIZE_1D, 1)]
 void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
@@ -117,9 +165,9 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         float dt = t1 - t0;
         if (dt <= 0.0)
         {
-            _VBufferLightingOutput[voxelCoord3] = 0;
-#ifdef ENABLE_REPROJECTION  // TODO
-            // _VBufferFeedback[voxelCoord3] = 0;
+            _VBufferLighting[voxelCoord3] = 0;
+#ifdef ENABLE_REPROJECTION
+            _VBufferFeedback[voxelCoord3] = 0;
 #endif
             t0 = t1;
             continue;
@@ -167,14 +215,92 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         }
 
 
-        float phase = CornetteShanksPhasePartConstant(anisotropy); // or rcp(4.0 * PI)
-        float4 blendValue = float4(aggregateLighting.radianceComplete,  extinction * dt);
-        totalRadiance += throughput * scattering * (phase * blendValue.rgb);
-        
-        opticalDepth += 0.5 * blendValue.a;
-        throughput *= sampleTransmittance;
-        _VBufferLightingOutput[voxelCoord3] = LinearizeRGBD(float4(/*FastTonemap*/(totalRadiance), opticalDepth));   // * float4(GetCurrentExposureMultiplier().xxx, 1)
+#ifdef ENABLE_REPROJECTION
+        // Clamp here to prevent generation of NaNs.
+        float4 voxelValue           = float4(aggregateLighting.radianceNoPhase, extinction * dt);
+        float4 linearizedVoxelValue = LinearizeRGBD(voxelValue);
+        float4 normalizedVoxelValue = linearizedVoxelValue * rcp(dt);
+        float4 normalizedBlendValue = normalizedVoxelValue;
 
+    // #if (SHADEROPTIONS_CAMERA_RELATIVE_RENDERING != 0) && defined(USING_STEREO_MATRICES)
+    //     // With XR single-pass, remove the camera-relative offset for the reprojected sample
+    //     centerWS -= _WorldSpaceCameraPosViewOffset;
+    // #endif
+        
+        // Reproject the history at 'centerWS'.
+        float4 reprojValue = SampleVBuffer(TEXTURE3D_ARGS(_VBufferHistory, s_linear_clamp_sampler),
+                                           centerWS,
+                                           _PrevCamPosRWS.xyz,
+                                           _PrevViewProjMatrix,
+                                           _VBufferViewportSize,                // Use this instead of '_VBufferPrevViewportSize' since we assume only using 1 VBufferParamer in VolumteicLightingPass
+                                           _VBufferLightingViewportScale.xyz,   // Use this instead of '_VBufferHistoryViewportScale' since we assume only using 1 VBufferParamer in VolumteicLightingPass
+                                           _VBufferLightingViewportLimit.xyz,   // Use this instead of '_VBufferHistoryViewportLimit' since we assume only using 1 VBufferParamer in VolumteicLightingPass
+                                           _VBufferDistanceEncodingParams,      // Use this instead of '_VBufferPrevDistanceEncodingParams' since we assume only using 1 VBufferParamer in VolumteicLightingPass
+                                           _VBufferDistanceDecodingParams,      // Use this instead of '_VBufferPrevDistanceDecodingParams' since we assume only using 1 VBufferParamer in VolumteicLightingPass
+                                           false, false, true) * float4(GetInversePreviousExposureMultiplier().xxx, 1);
+
+        bool reprojSuccess = (_VBufferHistoryIsValid != 0) && (reprojValue.a != 0);
+
+        if (reprojSuccess)
+        {
+            // Perform temporal blending in the log space ("Pixar blend").
+            normalizedBlendValue = lerp(normalizedVoxelValue, reprojValue, ComputeHistoryWeight());
+        }
+
+        // Store the feedback for the voxel.
+        // TODO: dynamic lights (which update their position, rotation, cookie or shadow at runtime)
+        // do not support reprojection and should neither read nor write to the history buffer.
+        // This will cause them to alias, but it is the only way to prevent ghosting.
+        _VBufferFeedback[voxelCoord3] = normalizedBlendValue * float4(GetCurrentExposureMultiplier().xxx, 1);
+
+        float4 linearizedBlendValue = normalizedBlendValue * dt;
+        float4 blendValue = DelinearizeRGBD(linearizedBlendValue);
+
+    #ifdef ENABLE_ANISOTROPY
+        // Estimate the influence of the phase function on the results of the current frame.
+        float3 phaseCurrFrame;
+
+        phaseCurrFrame.r = SafeDiv(aggregateLighting.radianceComplete.r, aggregateLighting.radianceNoPhase.r);
+        phaseCurrFrame.g = SafeDiv(aggregateLighting.radianceComplete.g, aggregateLighting.radianceNoPhase.g);
+        phaseCurrFrame.b = SafeDiv(aggregateLighting.radianceComplete.b, aggregateLighting.radianceNoPhase.b);
+
+        // Warning: in general, this does not work!
+        // For a voxel with a single light, 'phaseCurrFrame' is monochromatic, and since
+        // we don't jitter anisotropy, its value does not change from frame to frame
+        // for a static camera/scene. This is fine.
+        // If you have two lights per voxel, we compute:
+        // phaseCurrFrame = (phaseA * lightingA + phaseB * lightingB) / (lightingA + lightingB).
+        // 'phaseA' and 'phaseB' are still (different) constants for a static camera/scene.
+        // 'lightingA' and 'lightingB' are jittered, so they change from frame to frame.
+        // Therefore, 'phaseCurrFrame' becomes temporarily unstable and can cause flickering in practice. :-(
+        blendValue.rgb *= phaseCurrFrame;
+    #endif // ENABLE_ANISOTROPY
+
+#else   // NO REPROJECTION
+
+    #ifdef ENABLE_ANISOTROPY
+        float4 blendValue = float4(aggregateLighting.radianceComplete, extinction * dt);
+    #else
+        float4 blendValue = float4(aggregateLighting.radianceNoPhase,  extinction * dt);
+    #endif // ENABLE_ANISOTROPY
+
+#endif  // ENABLE_REPROJECTION
+
+    #ifdef ENABLE_ANISOTROPY
+        float phase = _CornetteShanksConstant;
+    #else
+        float phase = IsotropicPhaseFunction();
+    #endif // ENABLE_ANISOTROPY
+
+        totalRadiance += throughput * scattering * (phase * blendValue.rgb);
+        throughput *= sampleTransmittance;
+        
+        // Compute the optical depth up to the center of the interval.
+        opticalDepth += 0.5 * blendValue.a;
+
+        _VBufferLighting[voxelCoord3] = LinearizeRGBD(float4(/*FastTonemap*/(totalRadiance), opticalDepth)) * float4(GetCurrentExposureMultiplier().xxx, 1);
+
+        // Compute the optical depth up to the end of the interval.
         opticalDepth += 0.5 * blendValue.a;
 
         if (t0 * 0.99 > ray.maxDist)
@@ -188,9 +314,9 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
     {
         // uint3 voxelCoord = uint3(pixelCoord, slice + _VBufferSliceCount * unity_StereoEyeIndex);
         uint3 voxelCoord3 = uint3(posInput.positionSS, slice);
-        _VBufferLightingOutput[voxelCoord3] = 0;
+        _VBufferLighting[voxelCoord3] = 0;
 #ifdef ENABLE_REPROJECTION
-        _VBufferLightingOutput[voxelCoord3] = 0;
+        _VBufferFeedback[voxelCoord3] = 0;
 #endif
     }
 

@@ -9,9 +9,9 @@ real LerpWhiteTo(real b, real t) { return (1.0 - t) + b * t; }  // To prevent co
 
 CBUFFER_START(ShaderVariablesVolumetric)
     float   _VBufferAnisotropy;
-    float   __vbuffer_pad00__;
-    float   __vbuffer_pad01__;
-    float   __vbuffer_pad02__;
+    float   _CornetteShanksConstant;
+    uint    _VolumetricFilteringEnabled;
+    uint    _VBufferHistoryIsValid;
     float4  _VBufferLightingViewportScale;
     float4  _VBufferLightingViewportLimit;
     float4  _VBufferDistanceEncodingParams;
@@ -23,9 +23,8 @@ CBUFFER_START(ShaderVariablesVolumetric)
     float   _VBufferRcpSliceCount;
     float   _VBufferUnitDepthTexelSpacing;
     float4  _RTHandleScale;
+    // float   __vbuffer_pad00__;
 CBUFFER_END
-
-TEXTURE2D(_MaxZMaskTexture);
 
 struct JitteredRay
 {

@@ -232,6 +232,10 @@ namespace UniversalForwardPlusVolumetric
             }
         }
 
+        public static float CornetteShanksPhasePartConstant(float g)
+        {
+            return (3.0f / (8.0f * Mathf.PI)) * (1.0f - g * g) / (2.0f + g * g);
+        }
 
     }
 }

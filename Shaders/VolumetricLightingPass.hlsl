@@ -1,20 +1,7 @@
 #ifndef UNITY_VOLUMETRIC_LIGHTING_PASS_INCLUDED
 #define UNITY_VOLUMETRIC_LIGHTING_PASS_INCLUDED
 
-void EvaluateAtmosphericScattering(PositionInputs posInput, float3 V, out float3 color, out float3 opacity)
-{
-    color = opacity = 0;
-    float fogFragDist = distance(posInput.positionWS, GetCurrentViewPosition());
-    float4 volFog = float4(0.0, 0.0, 0.0, 0.0);
-
-    float3 texUVW = float3(posInput.positionNDC, EncodeLogarithmicDepthGeneralized(fogFragDist, _VBufferDistanceEncodingParams)) * _VBufferLightingViewportScale;
-    float4 value = SAMPLE_TEXTURE3D_LOD(_VBufferLighting, s_linear_clamp_sampler, min(texUVW, _VBufferLightingViewportLimit), 0);
-
-    volFog = DelinearizeRGBA(float4(/*FastTonemapInvert*/(value.rgb), value.a));
-
-    color = volFog.rgb; // Already pre-exposed
-    opacity = volFog.a;
-}
+#include "./VBuffer.hlsl"
 
 void AtmosphericScatteringCompute(Varyings input, float3 V, float depth, out float3 color, out float3 opacity)
 {
@@ -25,7 +12,24 @@ void AtmosphericScatteringCompute(Varyings input, float3 V, float depth, out flo
         posInput.positionWS = GetCurrentViewPosition() - V * 100;
     }
 
-    EvaluateAtmosphericScattering(posInput, V, color, opacity); // Premultiplied alpha
+    float fogFragDist = distance(posInput.positionWS, GetCurrentViewPosition());
+
+    bool doBiquadraticReconstruction = _VolumetricFilteringEnabled == 0; // Only if filtering is disabled.
+    float4 value = SampleVBuffer(TEXTURE3D_ARGS(_VBufferLighting, s_linear_clamp_sampler),
+                                    posInput.positionNDC,
+                                    fogFragDist,
+                                    _VBufferViewportSize,
+                                    _VBufferLightingViewportScale.xyz,
+                                    _VBufferLightingViewportLimit.xyz,
+                                    _VBufferDistanceEncodingParams,
+                                    _VBufferDistanceDecodingParams,
+                                    true, doBiquadraticReconstruction, false);
+
+    // TODO: add some slowly animated noise (dither?) to the reconstructed value.
+    // TODO: re-enable tone mapping after implementing pre-exposure.
+    float4 volFog = DelinearizeRGBA(float4(/*FastTonemapInvert*/(value.rgb), value.a));
+    color = volFog.rgb;
+    opacity = volFog.a;
 }
 
 float4 FragVBuffer(Varyings input) : SV_Target
@@ -176,14 +180,14 @@ float4 FragPerPixel(Varyings input) : SV_Target
             aggregateLighting.radianceComplete += lighting.radianceComplete;
         }
 
-        float phase = CornetteShanksPhasePartConstant(anisotropy); // or rcp(4.0 * PI)
+        float phase = _CornetteShanksConstant; // or rcp(4.0 * PI)
         float4 blendValue = float4(aggregateLighting.radianceComplete,  extinction * dt);
         totalRadiance += throughput * scattering * (phase * blendValue.rgb);
         opticalDepth += 0.5 * blendValue.a;
 
         throughput *= sampleTransmittance;
 
-        // opticalDepth += 0.5 * blendValue.a;
+        opticalDepth += 0.5 * blendValue.a;
 
         if (t0 * 0.99 > ray.maxDist)
         {

@@ -7,7 +7,17 @@ real LerpWhiteTo(real b, real t) { return (1.0 - t) + b * t; }  // To prevent co
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/VolumeRendering.hlsl"
 
+CBUFFER_START(ShaderVariablesFog)
+    float4  _HeightFogParams;
+    float4  _HeightFogBaseScattering;
+CBUFFER_END
+
+#define _HeightFogBaseHeight        _HeightFogParams.x
+#define _HeightFogBaseExtinction    _HeightFogParams.y
+#define _HeightFogExponents         _HeightFogParams.zw
+
 CBUFFER_START(ShaderVariablesVolumetric)
+    float4  _VBufferArtisticParams;
     float   _VBufferAnisotropy;
     float   _CornetteShanksConstant;
     uint    _VolumetricFilteringEnabled;
@@ -23,8 +33,10 @@ CBUFFER_START(ShaderVariablesVolumetric)
     float   _VBufferRcpSliceCount;
     float   _VBufferUnitDepthTexelSpacing;
     float4  _RTHandleScale;
-    // float   __vbuffer_pad00__;
+    // float4x4  _VBufferCoordToViewDirWS;  // TODO
 CBUFFER_END
+
+#define VBufferScatteringIntensity _VBufferArtisticParams.x
 
 struct JitteredRay
 {
@@ -43,6 +55,13 @@ struct VoxelLighting
     float3 radianceComplete;
     float3 radianceNoPhase;
 };
+
+// Returns the forward (up) direction of the current view in the world space.
+float3 GetViewUpDir()
+{
+    float4x4 viewMat = GetWorldToViewMatrix();
+    return viewMat[1].xyz;
+}
 
 bool IsInRange(float x, float2 range)
 {

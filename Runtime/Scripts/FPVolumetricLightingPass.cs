@@ -9,10 +9,18 @@ namespace UniversalForwardPlusVolumetric
     {
         private static class IDs
         {
+            public static int _VBufferDensity = Shader.PropertyToID("_VBufferDensity");
             public static int _VBufferLighting = Shader.PropertyToID("_VBufferLighting");
             public static int _VBufferLightingFiltered = Shader.PropertyToID("_VBufferLightingFiltered");
             public static int _VBufferFeedback = Shader.PropertyToID("_VBufferFeedback");
             public static int _VBufferHistory = Shader.PropertyToID("_VBufferHistory");
+
+            // Fog
+            public static int _HeightFogParams = Shader.PropertyToID("_HeightFogParams");
+            public static int _HeightFogBaseScattering = Shader.PropertyToID("_HeightFogBaseScattering");
+            
+            // Volumetric Lighting
+            public static int _VBufferArtisticParams = Shader.PropertyToID("_VBufferArtisticParams");
             public static int _VBufferAnisotropy = Shader.PropertyToID("_VBufferAnisotropy");
             public static int _CornetteShanksConstant = Shader.PropertyToID("_CornetteShanksConstant");
             public static int _VBufferHistoryIsValid = Shader.PropertyToID("_VBufferHistoryIsValid");
@@ -30,13 +38,16 @@ namespace UniversalForwardPlusVolumetric
             public static int _PrevCamPosRWS = Shader.PropertyToID("_PrevCamPosRWS");
             public static int _RTHandleScale = Shader.PropertyToID("_RTHandleScale");
         }
+        private static int s_VolumeVoxelizationCSKernal;
         private static int s_VBufferLightingCSKernal;
         private static int s_VBufferFilteringCSKernal;
 
-        private ComputeShader m_VolumetricLightingCS;
         private VolumetricConfig m_Config;
+        private ComputeShader m_VolumeVoxelizationCS;
+        private ComputeShader m_VolumetricLightingCS;
         private ComputeShader m_VolumetricLightingFilteringCS;
         private Material m_ResolveMat;
+        private RTHandle m_VBufferDensityHandle;
         private RTHandle m_VBufferLightingHandle;
         private RTHandle m_VBufferLightingFilteredHandle;
         private RTHandle[] m_VolumetricHistoryBuffers;
@@ -58,26 +69,30 @@ namespace UniversalForwardPlusVolumetric
 
         public void Setup(VolumetricConfig config, in VBufferParameters vBufferParameters)
         {
+            m_VolumeVoxelizationCS = config.volumeVoxelizationCS;
             m_VolumetricLightingCS = config.volumetricLightingCS;
             m_VolumetricLightingFilteringCS = config.volumetricLightingFilteringCS;
             m_ResolveMat = config.resolveMat;
             m_Config = config;
             m_VBufferParameters = vBufferParameters;
             m_ProfilingSampler = new ProfilingSampler("Volumetric Lighting");
+            ConfigureInput(ScriptableRenderPassInput.Depth);
         }
 
         public void Dispose()
         {
+            m_VBufferDensityHandle?.Release();
             m_VBufferLightingHandle?.Release();
             m_VBufferLightingFilteredHandle?.Release();
         }
 
         public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
         {
-            if (m_VolumetricLightingCS == null || m_VolumetricLightingFilteringCS == null)
+            if (m_VolumeVoxelizationCS == null
+                || m_VolumetricLightingCS == null
+                || m_VolumetricLightingFilteringCS == null)
                 return;
 
-            ConfigureInput(ScriptableRenderPassInput.Depth);
 
             var vBufferViewportSize = m_VBufferParameters.viewportSize;
             var camera = renderingData.cameraData.camera;
@@ -87,14 +102,15 @@ namespace UniversalForwardPlusVolumetric
             desc.dimension = TextureDimension.Tex3D;
             desc.volumeDepth = vBufferViewportSize.z;
             desc.enableRandomWrite = true;
-            RenderingUtils.ReAllocateIfNeeded(ref m_VBufferLightingHandle, desc, FilterMode.Trilinear, name:"_VBufferLighting");
+            RenderingUtils.ReAllocateIfNeeded(ref m_VBufferDensityHandle, desc, FilterMode.Point, name:"_VBufferDensity");
+            RenderingUtils.ReAllocateIfNeeded(ref m_VBufferLightingHandle, desc, FilterMode.Point, name:"_VBufferLighting");
 
             m_FilteringNeedsExtraBuffer = !(SystemInfo.IsFormatSupported(GraphicsFormat.R16G16B16A16_SFloat, FormatUsage.LoadStore));
 
             // Filtering
             if (m_Config.filterVolume && m_FilteringNeedsExtraBuffer)
             {
-                RenderingUtils.ReAllocateIfNeeded(ref m_VBufferLightingFilteredHandle, desc, FilterMode.Trilinear, name:"VBufferLightingFiltered");
+                RenderingUtils.ReAllocateIfNeeded(ref m_VBufferLightingFilteredHandle, desc, FilterMode.Point, name:"VBufferLightingFiltered");
                 CoreUtils.SetKeyword(m_VolumetricLightingFilteringCS, "NEED_SEPARATE_OUTPUT", m_FilteringNeedsExtraBuffer);
             }
 
@@ -110,13 +126,27 @@ namespace UniversalForwardPlusVolumetric
             }
 
             // Set shader variables
-            SetShaderVariables(cmd, camera);
+            SetFogShaderVariables(cmd, camera);
+            SetVolumetricShaderVariables(cmd, camera);
 
+            s_VolumeVoxelizationCSKernal = m_VolumeVoxelizationCS.FindKernel("VolumeVoxelization");
             s_VBufferLightingCSKernal = m_VolumetricLightingCS.FindKernel("VolumetricLighting");
             s_VBufferFilteringCSKernal = m_VolumetricLightingFilteringCS.FindKernel("FilterVolumetricLighting");
         }
 
-        private void SetShaderVariables(CommandBuffer cmd, Camera camera)
+        private void SetFogShaderVariables(CommandBuffer cmd, Camera camera)
+        {
+            float extinction = 1.0f / m_Config.fogAttenuationDistance;
+            Vector3 scattering = extinction * (Vector3)(Vector4)m_Config.albedo;
+            float layerDepth = Mathf.Max(0.01f, m_Config.maximumHeight - m_Config.baseHeight);
+            float H = VolumetricUtils.ScaleHeightFromLayerDepth(layerDepth);
+            Vector2 heightFogExponents = new Vector2(1.0f / H, H);
+
+            cmd.SetGlobalVector(IDs._HeightFogParams, new Vector4(m_Config.baseHeight, extinction, heightFogExponents.x, heightFogExponents.y));
+            cmd.SetGlobalVector(IDs._HeightFogBaseScattering, m_Config.useVolumetricLighting ? scattering : Vector4.one * extinction);
+        }
+
+        private void SetVolumetricShaderVariables(CommandBuffer cmd, Camera camera)
         {
             var vBufferViewportSize = m_VBufferParameters.viewportSize;
             var vFoV = camera.GetGateFittedFieldOfView() * Mathf.Deg2Rad;
@@ -129,6 +159,7 @@ namespace UniversalForwardPlusVolumetric
 
             cmd.SetGlobalInt(IDs._VolumetricFilteringEnabled, m_Config.filterVolume ? 1 : 0);
             cmd.SetGlobalInt(IDs._VBufferHistoryIsValid, (m_Config.enableReprojection && m_VBufferHistoryIsValid) ? 1 : 0);
+            cmd.SetGlobalVector(IDs._VBufferArtisticParams, new Vector4(m_Config.intensity, 0, 0, 0));
             cmd.SetGlobalFloat(IDs._VBufferAnisotropy, m_Config.anisotropy);
             cmd.SetGlobalFloat(IDs._CornetteShanksConstant, VolumetricUtils.CornetteShanksPhasePartConstant(m_Config.anisotropy));
             cmd.SetGlobalFloat(IDs._VBufferVoxelSize, m_VBufferParameters.voxelSize);
@@ -163,13 +194,23 @@ namespace UniversalForwardPlusVolumetric
                 var voxelSize = m_VBufferParameters.voxelSize;
                 var vBufferViewportSize = m_VBufferParameters.viewportSize;
 
+                // The shader defines GROUP_SIZE_1D = 8.
+                int width = ((int)vBufferViewportSize.x + 7) / 8;
+                int height = ((int)vBufferViewportSize.y + 7) / 8;
+
+                // VBuffer Density
+                if (m_VolumeVoxelizationCS != null)
+                {
+                    cmd.SetComputeTextureParam(m_VolumeVoxelizationCS, s_VolumeVoxelizationCSKernal, IDs._VBufferDensity, m_VBufferDensityHandle);
+                    cmd.DispatchCompute(m_VolumeVoxelizationCS, s_VolumeVoxelizationCSKernal, width, height, 1);
+                }
+
+                // VBuffer Lighting
                 if (m_VolumetricLightingCS != null
                     && m_VolumetricLightingFilteringCS != null
                     && Shader.GetGlobalTexture("_CameraDepthTexture") != null)   // To prevent error log
                 {
-                    // The shader defines GROUP_SIZE_1D = 8.
-                    int width = ((int)vBufferViewportSize.x + 7) / 8;
-                    int height = ((int)vBufferViewportSize.y + 7) / 8;
+                    cmd.SetComputeTextureParam(m_VolumetricLightingCS, s_VBufferLightingCSKernal, IDs._VBufferDensity, m_VBufferDensityHandle);
                     cmd.SetComputeTextureParam(m_VolumetricLightingCS, s_VBufferLightingCSKernal, IDs._VBufferLighting, m_VBufferLightingHandle);
                     if (m_Config.enableReprojection)
                     {

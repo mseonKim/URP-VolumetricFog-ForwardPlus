@@ -116,20 +116,8 @@ namespace UniversalForwardPlusVolumetric
 
         public static void ComputeVolumetricFogSliceCountAndScreenFraction(VolumetricConfig config, out int sliceCount, out float screenFraction)
         {
-            // TODO:
-            // if (config.fogControlMode == FogControl.Balance)
-            // {
-            //     // Evaluate the ssFraction and sliceCount based on the control parameters
-            //     float maxScreenSpaceFraction = (1.0f - fog.resolutionDepthRatio) * (Fog.maxFogScreenResolutionPercentage - Fog.minFogScreenResolutionPercentage) + Fog.minFogScreenResolutionPercentage;
-            //     screenFraction = Mathf.Lerp(Fog.minFogScreenResolutionPercentage, maxScreenSpaceFraction, fog.volumetricFogBudget) * 0.01f;
-            //     float maxSliceCount = Mathf.Max(1.0f, fog.resolutionDepthRatio * Fog.maxFogSliceCount);
-            //     sliceCount = (int)Mathf.Lerp(1.0f, maxSliceCount, fog.volumetricFogBudget);
-            // }
-            // else
-            // {
-                screenFraction = config.screenResolutionPercentage * 0.01f;
-                sliceCount = config.volumeSliceCount;
-            // }
+            screenFraction = config.screenResolutionPercentage * 0.01f;
+            sliceCount = config.volumeSliceCount;
         }
 
         public static Vector3Int ComputeVolumetricViewportSize(VolumetricConfig config, Camera camera, ref float voxelSize)
@@ -138,18 +126,10 @@ namespace UniversalForwardPlusVolumetric
             int viewportHeight = camera.scaledPixelHeight;
 
             ComputeVolumetricFogSliceCountAndScreenFraction(config, out var sliceCount, out var screenFraction);
-            if (config.fogControlMode == FogControl.Balance)
-            {
-                // Evaluate the voxel size
-                voxelSize = 1.0f / screenFraction;
-            }
+            if (config.screenResolutionPercentage == k_OptimalFogScreenResolutionPercentage)
+                voxelSize = 8;
             else
-            {
-                if (config.screenResolutionPercentage == k_OptimalFogScreenResolutionPercentage)
-                    voxelSize = 8;
-                else
-                    voxelSize = 1.0f / screenFraction; // Does not account for rounding (same function, above)
-            }
+                voxelSize = 1.0f / screenFraction; // Does not account for rounding (same function, above)
 
             int w = Mathf.RoundToInt(viewportWidth * screenFraction);
             int h = Mathf.RoundToInt(viewportHeight * screenFraction);
@@ -235,6 +215,14 @@ namespace UniversalForwardPlusVolumetric
         public static float CornetteShanksPhasePartConstant(float g)
         {
             return (3.0f / (8.0f * Mathf.PI)) * (1.0f - g * g) / (2.0f + g * g);
+        }
+
+        public static float ScaleHeightFromLayerDepth(float d)
+        {
+            // Exp[-d / H] = 0.001
+            // -d / H = Log[0.001]
+            // H = d / -Log[0.001]
+            return d * 0.144765f;
         }
 
     }

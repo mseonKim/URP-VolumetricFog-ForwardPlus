@@ -35,23 +35,35 @@ namespace UniversalForwardPlusVolumetric
     public class VolumetricConfig : ScriptableObject
     {
         [Header("Resources")]
+        public ComputeShader volumeVoxelizationCS;
         public ComputeShader volumetricLightingCS;
         public ComputeShader volumetricLightingFilteringCS;
         public ComputeShader generateMaxZCS;
         public Material resolveMat;
 
         [Header("Fog")]
-        public FogControl fogControlMode = FogControl.Balance;
-        [Range(-1f, 1f)] public float anisotropy;
+        // Height Fog
+        public float baseHeight;
+        public float maximumHeight = 1000f;
+        [Range(1f, 400f)]
+        public float fogAttenuationDistance = 50f;
 
         [Header("Volumetric Lighting")]
         public bool useVolumetricLighting = true;
         public VoxelMode voxelMode = VoxelMode._VBuffer;    // TODO: Remove this
+        public Color albedo = Color.white;
+        [Range(0f, 10f)]
+        public float intensity = 1f;
+        [Range(-1f, 1f)]
+        public float anisotropy;
+        [Tooltip("Sets the distance (in meters) from the Camera's Near Clipping Plane to the back of the Camera's volumetric lighting buffer. The lower the distance is, the higher the fog quality is.")]
         [Range(0.1f, 64f)]
         public float depthExtent = 64f;
         [Tooltip("Controls the resolution of the volumetric buffer (3D texture) along the x-axis and y-axis relative to the resolution of the screen.")]
+        [Range(6.25f, 50f)]
         public float screenResolutionPercentage = 12.5f;
         [Tooltip("Controls the number of slices to use the volumetric buffer (3D texture) along the camera's focal axis.")]
+        [Range(1, 256)]
         public int volumeSliceCount = 64;
 
         public DenoiseMode denoiseMode = DenoiseMode.Gaussian;

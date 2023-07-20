@@ -4,10 +4,13 @@ MonoImporter:
   externalObjects: {}
   serializedVersion: 2
   defaultReferences:
+  - volumeVoxelizationCS: {fileID: 7200000, guid: dcae1ab958dd06047b691a4f76998d0f,
+      type: 3}
   - volumetricLightingCS: {fileID: 7200000, guid: 633f6c93e531b7649877f1ee6af81206,
       type: 3}
   - volumetricLightingFilteringCS: {fileID: 7200000, guid: e7c6734610ba8774789df5bebb773484,
       type: 3}
+  - generateMaxZCS: {fileID: 7200000, guid: ef07e1cecfcf17849b9dabc5c283c5d1, type: 3}
   - resolveMat: {fileID: 2100000, guid: 2acfffc3c62e9b24b813c8247c7ab5b7, type: 2}
   executionOrder: 0
   icon: {instanceID: 0}

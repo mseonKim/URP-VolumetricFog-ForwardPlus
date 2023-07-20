@@ -12,10 +12,10 @@
 #define TILE_SIZE_CLUSTERED 32  // NOTE: This assumes the screen size == FHD (1920 * 1080)
 
 float4 _PrevCamPosRWS;
+TEXTURE3D(_VBufferDensity);                     // RGB = scattering, A = extinction
 RW_TEXTURE3D(float4, _VBufferLighting);
 RW_TEXTURE3D(float4, _VBufferFeedback);
 TEXTURE3D(_VBufferHistory);
-// TEXTURE3D(_VBufferDensity);                     // RGB = scattering, A = extinction
 TEXTURE2D(_MaxZMaskTexture);
 SAMPLER(s_point_clamp_sampler);
 SAMPLER(s_linear_clamp_sampler);
@@ -45,13 +45,13 @@ float ComputeHistoryWeight()
 
 float GetInversePreviousExposureMultiplier()
 {
-    return 1.0;
+    return 1.0f;
     // float exposure = GetPreviousExposureMultiplier();
     // return rcp(exposure + (exposure == 0.0)); // zero-div guard
 }
 float GetCurrentExposureMultiplier()
 {
-    return 1.0;
+    return 1.0f;
 // #if SHADEROPTIONS_PRE_EXPOSITION
 //     // _ProbeExposureScale is a scale used to perform range compression to avoid saturation of the content of the probes. It is 1.0 if we are not rendering probes.
 //     return LOAD_TEXTURE2D(_ExposureTexture, int2(0, 0)).x * _ProbeExposureScale;
@@ -71,8 +71,8 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
     uint2 groupOffset = groupId * GROUP_SIZE_1D;
     uint2 voxelCoord  = groupOffset + groupThreadId;
 
-    float3 F = -UNITY_MATRIX_V[2].xyz;
-    float3 U = UNITY_MATRIX_V[1].xyz;
+    float3 F = GetViewForwardDir();
+    float3 U = GetViewUpDir();
     float3 R = cross(F, U);
 
     float2 centerCoord = voxelCoord + float2(0.5, 0.5);
@@ -89,7 +89,7 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
     float  rcpLenRightDir = rsqrt(dot(rightDirWS, rightDirWS));
 
     JitteredRay ray;
-    ray.originWS = _WorldSpaceCameraPos.xyz;
+    ray.originWS = GetCurrentViewPosition();
     ray.centerDirWS = rayDirWS * rcpLenRayDir;
 
     float FdotD = dot(F, ray.centerDirWS);
@@ -177,9 +177,9 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         float3 centerWS = ray.originWS + t * ray.centerDirWS;
         float3 radiance = 0;
 
-        // TODO: float4 density = LOAD_TEXTURE3D(_VBufferDensity, voxelCoord);
-        float3 scattering = 0.05;
-        float extinction = 0.05;
+        float4 density = LOAD_TEXTURE3D(_VBufferDensity, voxelCoord3);
+        float3 scattering = density.rgb * VBufferScatteringIntensity;
+        float extinction = density.a;
 
         // Perform per-pixel randomization by adding an offset and then sampling uniformly
         // (in the log space) in a vein similar to Stochastic Universal Sampling:
@@ -214,7 +214,6 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
             aggregateLighting.radianceComplete += lighting.radianceComplete;
         }
 
-
 #ifdef ENABLE_REPROJECTION
         // Clamp here to prevent generation of NaNs.
         float4 voxelValue           = float4(aggregateLighting.radianceNoPhase, extinction * dt);
@@ -244,7 +243,8 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         if (reprojSuccess)
         {
             // Perform temporal blending in the log space ("Pixar blend").
-            normalizedBlendValue = lerp(normalizedVoxelValue, reprojValue, ComputeHistoryWeight());
+            // TODO: Active this
+            // normalizedBlendValue = lerp(normalizedVoxelValue, reprojValue, ComputeHistoryWeight());
         }
 
         // Store the feedback for the voxel.

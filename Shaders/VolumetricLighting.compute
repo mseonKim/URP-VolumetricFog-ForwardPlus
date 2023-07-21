@@ -9,7 +9,6 @@
 
 
 #define GROUP_SIZE_1D 8
-#define TILE_SIZE_CLUSTERED 32  // NOTE: This assumes the screen size == FHD (1920 * 1080)
 
 float4 _PrevCamPosRWS;
 TEXTURE3D(_VBufferDensity);                     // RGB = scattering, A = extinction

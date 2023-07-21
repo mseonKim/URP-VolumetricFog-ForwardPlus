@@ -26,7 +26,6 @@ MonoBehaviour:
   tint: {r: 1, g: 1, b: 1, a: 1}
   maxFogDistance: 5000
   mipFogMaxMip: 0.5
-  skyCubemapMaxMip: 7
   mipFogNear: 0
   mipFogFar: 1000
   baseHeight: 0

@@ -6,15 +6,6 @@ namespace UniversalForwardPlusVolumetric
 {
     public class GenerateMaxZPass : ScriptableRenderPass
     {
-        private static class IDs
-        {
-            public static int _InputTexture = Shader.PropertyToID("_InputTexture");
-            public static int _OutputTexture = Shader.PropertyToID("_OutputTexture");
-            public static int _SrcOffsetAndLimit = Shader.PropertyToID("_SrcOffsetAndLimit");
-            public static int _DilationWidth = Shader.PropertyToID("_DilationWidth");
-            public static int _MaxZMaskTexture = Shader.PropertyToID("_MaxZMaskTexture");
-        }
-
         private GenerateMaxZMaskPassData m_PassData;
         private RTHandle m_MaxZ8xBufferHandle;
         private RTHandle m_MaxZBufferHandle;

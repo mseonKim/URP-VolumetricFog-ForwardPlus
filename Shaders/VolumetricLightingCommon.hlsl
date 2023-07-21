@@ -8,14 +8,14 @@ real LerpWhiteTo(real b, real t) { return (1.0 - t) + b * t; }  // To prevent co
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/VolumeRendering.hlsl"
 
 CBUFFER_START(ShaderVariablesFog)
-    uint    _FogEnabled;
-    uint    _EnableVolumetricFog;
-    uint    _FogColorMode;
-    uint    _MaxEnvCubemapMip;
-    float4  _FogColor;
-    float4  _MipFogParameters;
-    float4  _HeightFogParams;
-    float4  _HeightFogBaseScattering;
+    uint        _FogEnabled;
+    uint        _EnableVolumetricFog;
+    uint        _FogColorMode;
+    uint        _MaxEnvCubemapMip;
+    float4      _FogColor;
+    float4      _MipFogParameters;
+    float4      _HeightFogParams;
+    float4      _HeightFogBaseScattering;
 CBUFFER_END
 
 #define FOGCOLORMODE_SKY_COLOR              1   // 0 = Constant color
@@ -28,26 +28,26 @@ CBUFFER_END
 #define _HeightFogExponents                 _HeightFogParams.zw
 
 CBUFFER_START(ShaderVariablesVolumetric)
-    float   _VBufferAnisotropy;
-    float   _CornetteShanksConstant;
-    uint    _VolumetricFilteringEnabled;
-    uint    _VBufferHistoryIsValid;
-    float4  _VBufferLightingViewportScale;
-    float4  _VBufferLightingViewportLimit;
-    float4  _VBufferDistanceEncodingParams;
-    float4  _VBufferDistanceDecodingParams;
-    float4  _VBufferSampleOffset;
-    float4  _VBufferViewportSize;
-    float   _VBufferVoxelSize;
-    uint    _VBufferSliceCount;
-    float   _VBufferRcpSliceCount;
-    float   _VBufferUnitDepthTexelSpacing;
-    float4  _RTHandleScale;
-    float   _VBufferScatteringIntensity;
-    float   _VBufferLastSliceDist;
-    float   __vbuffer_pad00__;
-    float   __vbuffer_pad01__;
-    // float4x4  _VBufferCoordToViewDirWS;  // TODO
+    uint        _VolumetricFilteringEnabled;
+    uint        _VBufferHistoryIsValid;
+    uint        _VBufferSliceCount;
+    float       _VBufferAnisotropy;
+    float       _CornetteShanksConstant;
+    float       _VBufferVoxelSize;
+    float       _VBufferRcpSliceCount;
+    float       _VBufferUnitDepthTexelSpacing;
+    float       _VBufferScatteringIntensity;
+    float       _VBufferLastSliceDist;
+    float       __vbuffer_pad00__;
+    float       __vbuffer_pad01__;
+    float4      _VBufferViewportSize;
+    float4      _VBufferLightingViewportScale;
+    float4      _VBufferLightingViewportLimit;
+    float4      _VBufferDistanceEncodingParams;
+    float4      _VBufferDistanceDecodingParams;
+    float4      _VBufferSampleOffset;
+    float4      _RTHandleScale;
+    float4x4    _VBufferCoordToViewDirWS;
 CBUFFER_END
 
 

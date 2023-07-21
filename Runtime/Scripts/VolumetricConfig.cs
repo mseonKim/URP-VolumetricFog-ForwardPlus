@@ -4,23 +4,18 @@ using UnityEngine;
 
 namespace UniversalForwardPlusVolumetric
 {
+    public enum FogColorMode
+    {
+        /// <summary>Fog is a constant color.</summary>
+        ConstantColor,
+        /// <summary>Fog uses the current sky to determine its color.</summary>
+        SkyColor,
+    }
+
     public enum VoxelMode
     {
         _PerPixel,
         _VBuffer
-    }
-
-    public enum FogControl
-    {
-        /// <summary>
-        /// Use this mode if you want to change the fog control properties based on a higher abstraction level centered around performance.
-        /// </summary>
-        Balance,
-
-        /// <summary>
-        /// Use this mode if you want to have direct access to the internal properties that control volumetric fog.
-        /// </summary>
-        Manual
     }
 
     public enum DenoiseMode
@@ -31,7 +26,7 @@ namespace UniversalForwardPlusVolumetric
         Both
     }
 
-    [CreateAssetMenu(menuName = "UniversalVolumetric/VolumetricConfig")]
+    [CreateAssetMenu(menuName = "UniversalVolumetric/VolumetricFogConfig")]
     public class VolumetricConfig : ScriptableObject
     {
         [Header("Resources")]
@@ -42,6 +37,23 @@ namespace UniversalForwardPlusVolumetric
         public Material resolveMat;
 
         [Header("Fog")]
+        // Fog Base
+        [Tooltip("Enables the fog.")]
+        public bool enabled = false;
+        public FogColorMode colorMode = FogColorMode.SkyColor;
+        [Tooltip("Specifies the constant color of the fog.")]
+        public Color color = Color.grey;
+        [Tooltip("Specifies the tint of the fog.")]
+        public Color tint = Color.white;
+        [Tooltip("Sets the maximum fog distance when it shades the skybox or the Far Clipping Plane of the Camera.")]
+        public float maxFogDistance = 5000f;
+        [Tooltip("Controls the maximum mip map for mip fog (0 is the lowest mip and 1 is the highest mip).")]
+        [Range(0f, 1f)] public float mipFogMaxMip = 0.5f;
+        [Tooltip("Sets the distance at which the minimum mip image of the blurred sky texture as the fog color.")]
+        public float mipFogNear = 0f;
+        [Tooltip("Sets the distance at which the maximum mip image of the blurred sky texture as the fog color.")]
+        public float mipFogFar = 1000f;
+
         // Height Fog
         public float baseHeight;
         public float maximumHeight = 1000f;
@@ -50,7 +62,7 @@ namespace UniversalForwardPlusVolumetric
 
         [Header("Volumetric Lighting")]
         public bool useVolumetricLighting = true;
-        public VoxelMode voxelMode = VoxelMode._VBuffer;    // TODO: Remove this
+        [HideInInspector] public VoxelMode voxelMode = VoxelMode._VBuffer;    // TODO: Remove this
         public Color albedo = Color.white;
         [Range(0f, 10f)]
         public float intensity = 1f;

@@ -43,22 +43,6 @@ float ComputeHistoryWeight()
     return historyWeight;
 }
 
-float GetInversePreviousExposureMultiplier()
-{
-    return 1.0f;
-    // float exposure = GetPreviousExposureMultiplier();
-    // return rcp(exposure + (exposure == 0.0)); // zero-div guard
-}
-float GetCurrentExposureMultiplier()
-{
-    return 1.0f;
-// #if SHADEROPTIONS_PRE_EXPOSITION
-//     // _ProbeExposureScale is a scale used to perform range compression to avoid saturation of the content of the probes. It is 1.0 if we are not rendering probes.
-//     return LOAD_TEXTURE2D(_ExposureTexture, int2(0, 0)).x * _ProbeExposureScale;
-// #else
-//     return _ProbeExposureScale;
-// #endif
-}
 
 [numthreads(GROUP_SIZE_1D, GROUP_SIZE_1D, 1)]
 void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
@@ -178,7 +162,7 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         float3 radiance = 0;
 
         float4 density = LOAD_TEXTURE3D(_VBufferDensity, voxelCoord3);
-        float3 scattering = density.rgb * VBufferScatteringIntensity;
+        float3 scattering = density.rgb * _VBufferScatteringIntensity;
         float extinction = density.a;
 
         // Perform per-pixel randomization by adding an offset and then sampling uniformly

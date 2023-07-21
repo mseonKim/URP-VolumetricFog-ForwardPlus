@@ -8,16 +8,26 @@ real LerpWhiteTo(real b, real t) { return (1.0 - t) + b * t; }  // To prevent co
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/VolumeRendering.hlsl"
 
 CBUFFER_START(ShaderVariablesFog)
+    uint    _FogEnabled;
+    uint    _EnableVolumetricFog;
+    uint    _FogColorMode;
+    uint    _MaxEnvCubemapMip;
+    float4  _FogColor;
+    float4  _MipFogParameters;
     float4  _HeightFogParams;
     float4  _HeightFogBaseScattering;
 CBUFFER_END
 
-#define _HeightFogBaseHeight        _HeightFogParams.x
-#define _HeightFogBaseExtinction    _HeightFogParams.y
-#define _HeightFogExponents         _HeightFogParams.zw
+#define FOGCOLORMODE_SKY_COLOR              1   // 0 = Constant color
+#define ENVCONSTANTS_CONVOLUTION_MIP_COUNT  _MaxEnvCubemapMip
+#define _MipFogNear                         _MipFogParameters.x
+#define _MipFogFar                          _MipFogParameters.y
+#define _MipFogMaxMip                       _MipFogParameters.z
+#define _HeightFogBaseHeight                _HeightFogParams.x
+#define _HeightFogBaseExtinction            _HeightFogParams.y
+#define _HeightFogExponents                 _HeightFogParams.zw
 
 CBUFFER_START(ShaderVariablesVolumetric)
-    float4  _VBufferArtisticParams;
     float   _VBufferAnisotropy;
     float   _CornetteShanksConstant;
     uint    _VolumetricFilteringEnabled;
@@ -33,10 +43,13 @@ CBUFFER_START(ShaderVariablesVolumetric)
     float   _VBufferRcpSliceCount;
     float   _VBufferUnitDepthTexelSpacing;
     float4  _RTHandleScale;
+    float   _VBufferScatteringIntensity;
+    float   _VBufferLastSliceDist;
+    float   __vbuffer_pad00__;
+    float   __vbuffer_pad01__;
     // float4x4  _VBufferCoordToViewDirWS;  // TODO
 CBUFFER_END
 
-#define VBufferScatteringIntensity _VBufferArtisticParams.x
 
 struct JitteredRay
 {
@@ -61,6 +74,33 @@ float3 GetViewUpDir()
 {
     float4x4 viewMat = GetWorldToViewMatrix();
     return viewMat[1].xyz;
+}
+
+float GetInversePreviousExposureMultiplier()
+{
+    return 1.0f;
+    // float exposure = GetPreviousExposureMultiplier();
+    // return rcp(exposure + (exposure == 0.0)); // zero-div guard
+}
+float GetCurrentExposureMultiplier()
+{
+    return 1.0f;
+// #if SHADEROPTIONS_PRE_EXPOSITION
+//     // _ProbeExposureScale is a scale used to perform range compression to avoid saturation of the content of the probes. It is 1.0 if we are not rendering probes.
+//     return LOAD_TEXTURE2D(_ExposureTexture, int2(0, 0)).x * _ProbeExposureScale;
+// #else
+//     return _ProbeExposureScale;
+// #endif
+}
+
+// Copied from EntityLighting
+real3 DecodeHDREnvironment(real4 encodedIrradiance, real4 decodeInstructions)
+{
+    // Take into account texture alpha if decodeInstructions.w is true(the alpha value affects the RGB channels)
+    real alpha = max(decodeInstructions.w * (encodedIrradiance.a - 1.0) + 1.0, 0.0);
+
+    // If Linear mode is not supported we can skip exponent part
+    return (decodeInstructions.x * PositivePow(alpha, decodeInstructions.y)) * encodedIrradiance.rgb;
 }
 
 bool IsInRange(float x, float2 range)

@@ -225,5 +225,27 @@ namespace UniversalForwardPlusVolumetric
             return d * 0.144765f;
         }
 
+        public static int CalculateMaxEnvCubemapMip()
+        {
+            int maxMip = 0;
+            if (RenderSettings.defaultReflectionMode == UnityEngine.Rendering.DefaultReflectionMode.Custom)
+            {
+                var texture = RenderSettings.customReflectionTexture;
+                if (texture == null)
+                {
+                    return 0;
+                }
+                return RenderSettings.customReflectionTexture.mipmapCount;
+            }
+            
+            int res = RenderSettings.defaultReflectionResolution;
+            while (res > 1)
+            {
+                res >>= 1;
+                maxMip++;
+            }
+            return maxMip;
+        }
+
     }
 }

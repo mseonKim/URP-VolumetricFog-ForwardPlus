@@ -20,6 +20,15 @@ MonoBehaviour:
     type: 3}
   generateMaxZCS: {fileID: 7200000, guid: ef07e1cecfcf17849b9dabc5c283c5d1, type: 3}
   resolveMat: {fileID: 2100000, guid: 2acfffc3c62e9b24b813c8247c7ab5b7, type: 2}
+  enabled: 1
+  colorMode: 1
+  color: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  tint: {r: 1, g: 1, b: 1, a: 1}
+  maxFogDistance: 5000
+  mipFogMaxMip: 0.5
+  skyCubemapMaxMip: 7
+  mipFogNear: 0
+  mipFogFar: 1000
   baseHeight: 0
   maximumHeight: 1000
   fogAttenuationDistance: 50

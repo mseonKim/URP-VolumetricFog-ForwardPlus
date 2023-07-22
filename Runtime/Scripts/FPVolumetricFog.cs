@@ -29,7 +29,7 @@ namespace UniversalForwardPlusVolumetric
             m_GenerateMaxZPass.Setup(config, vBufferParameters);
             renderer.EnqueuePass(m_GenerateMaxZPass);
 
-            if (config.useVolumetricLighting)
+            if (config.volumetricLighting)
             {
                 m_VolumetricLightingPass.Setup(config, vBufferParameters);
                 renderer.EnqueuePass(m_VolumetricLightingPass);

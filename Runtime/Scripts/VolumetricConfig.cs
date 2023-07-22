@@ -61,7 +61,10 @@ namespace UniversalForwardPlusVolumetric
         public float fogAttenuationDistance = 50f;
 
         [Header("Volumetric Lighting")]
-        public bool useVolumetricLighting = true;
+        public bool volumetricLighting = true;
+        public bool enableDirectionalLight = true;
+        [Tooltip("Point and spot lights are only supported for Forward+")]
+        public bool enablePointAndSpotLight = true;
         [HideInInspector] public VoxelMode voxelMode = VoxelMode._VBuffer;    // TODO: Remove this
         public Color albedo = Color.white;
         [Range(0f, 10f)]

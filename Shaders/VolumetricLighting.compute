@@ -3,6 +3,7 @@
 #pragma multi_compile _ _FORWARD_PLUS
 #pragma multi_compile _ ENABLE_REPROJECTION
 #pragma multi_compile _ ENABLE_ANISOTROPY
+#pragma multi_compile _ SUPPORT_LOCAL_LIGHTS
 
 #include "./VolumetricLightingCommon.hlsl"
 #include "./VBuffer.hlsl"
@@ -60,13 +61,8 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
 
     float2 centerCoord = voxelCoord + float2(0.5, 0.5);
 
-    // TODO: Replace with VBufferCoordToViewDirWS
-    const float2 rcpVBufferSize = _ScreenSize.zw * _VBufferVoxelSize;
-    float3 ClipSpace = float3(centerCoord * rcpVBufferSize * float2(2.0, -2.0) - float2(1.0, -1.0), 1.0);
-    float4 HViewPos = mul(unity_MatrixInvP, float4(ClipSpace, 1.0));
-    float3 WorldDir = mul((float3x3)unity_MatrixInvV, HViewPos.xyz / HViewPos.w);
-
-    float3 rayDirWS       = WorldDir; 
+    // Compute a ray direction s.t. ViewSpace(rayDirWS).z = 1.
+    float3 rayDirWS       = mul(-float4(centerCoord, 1, 1), _VBufferCoordToViewDirWS).xyz;  // _VBufferCoordToViewDirWS[unity_StereoEyeIndex]
     float3 rightDirWS     = cross(rayDirWS, U);
     float  rcpLenRayDir   = rsqrt(dot(rayDirWS, rayDirWS));
     float  rcpLenRightDir = rsqrt(dot(rightDirWS, rightDirWS));
@@ -189,6 +185,7 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
 
         // TODO: Directional
 
+#ifdef SUPPORT_LOCAL_LIGHTS
         // Local
         {
             VoxelLighting lighting = EvaluateVoxelLightingLocal(pixelCoord, extinction, anisotropy,
@@ -196,6 +193,7 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
             aggregateLighting.radianceNoPhase  += lighting.radianceNoPhase;
             aggregateLighting.radianceComplete += lighting.radianceComplete;
         }
+#endif
 
 #ifdef ENABLE_REPROJECTION
         // Clamp here to prevent generation of NaNs.

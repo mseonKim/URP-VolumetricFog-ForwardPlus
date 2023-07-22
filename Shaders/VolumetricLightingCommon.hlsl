@@ -116,12 +116,12 @@ VoxelLighting EvaluateVoxelLightingLocal(float2 pixelCoord, float extinction, fl
     VoxelLighting lighting;
     ZERO_INITIALIZE(VoxelLighting, lighting);
 
+#if USE_FORWARD_PLUS
     float sampleOpticalDepth = extinction * dt;
     float sampleTransmittance = exp(-sampleOpticalDepth);
     float rcpExtinction = rcp(extinction);
     float weight = (rcpExtinction - rcpExtinction * sampleTransmittance) * rcpExtinction;
 
-#if USE_FORWARD_PLUS
     uint lightIndex;
     ClusterIterator _urp_internal_clusterIterator = ClusterInit(GetNormalizedScreenSpaceUV(pixelCoord), centerWS, 0);
     [loop]
@@ -148,7 +148,7 @@ VoxelLighting EvaluateVoxelLightingLocal(float2 pixelCoord, float extinction, fl
         // Jitter
         float lightSqRadius = rcp(distanceAndSpotAttenuation.x);
         float t, distSq, rcpPdf;
-        ImportanceSamplePunctualLight(rndVal, lightPositionWS, lightSqRadius,
+        ImportanceSamplePunctualLight(rndVal, lightPositionWS.xyz, lightSqRadius,
                                       ray.originWS, ray.jitterDirWS, t0, t1,
                                       t, distSq, rcpPdf);
         float3 positionWS = ray.originWS + t * ray.jitterDirWS;

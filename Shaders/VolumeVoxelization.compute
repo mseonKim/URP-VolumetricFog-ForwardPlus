@@ -79,13 +79,7 @@ void VolumeVoxelization(uint3 dispatchThreadId : SV_DispatchThreadID,
     float2 centerCoord = voxelCoord + float2(0.5, 0.5);
 
     // Compute a ray direction s.t. ViewSpace(rayDirWS).z = 1.
-    // TODO: float3 rayDirWS       = mul(-float4(centerCoord, 1, 1), _VBufferCoordToViewDirWS[unity_StereoEyeIndex]).xyz;
-    const float2 rcpVBufferSize = _ScreenSize.zw * _VBufferVoxelSize;
-    float3 ClipSpace = float3(centerCoord * rcpVBufferSize * float2(2.0, -2.0) - float2(1.0, -1.0), 1.0);
-    float4 HViewPos = mul(unity_MatrixInvP, float4(ClipSpace, 1.0));
-    float3 WorldDir = mul((float3x3)unity_MatrixInvV, HViewPos.xyz / HViewPos.w);
-
-    float3 rayDirWS       = WorldDir;
+    float3 rayDirWS       = mul(-float4(centerCoord, 1, 1), _VBufferCoordToViewDirWS).xyz;  // _VBufferCoordToViewDirWS[unity_StereoEyeIndex]
     float3 rightDirWS     = cross(rayDirWS, U);
     float  rcpLenRayDir   = rsqrt(dot(rayDirWS, rayDirWS));
     float  rcpLenRightDir = rsqrt(dot(rightDirWS, rightDirWS));

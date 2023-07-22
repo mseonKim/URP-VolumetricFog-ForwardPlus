@@ -5,6 +5,7 @@
 #pragma multi_compile _ ENABLE_ANISOTROPY
 #pragma multi_compile _ SUPPORT_DIRECTIONAL_LIGHTS
 #pragma multi_compile _ SUPPORT_LOCAL_LIGHTS
+#pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
 
 #include "./VolumetricLightingCommon.hlsl"
 #include "./VBuffer.hlsl"
@@ -158,7 +159,7 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         float3 radiance = 0;
 
         float4 density = LOAD_TEXTURE3D(_VBufferDensity, voxelCoord3);
-        float3 scattering = density.rgb * _VBufferScatteringIntensity;
+        float3 scattering = density.rgb;
         float extinction = density.a;
 
         // Perform per-pixel randomization by adding an offset and then sampling uniformly

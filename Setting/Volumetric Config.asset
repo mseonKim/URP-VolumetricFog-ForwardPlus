@@ -33,7 +33,7 @@ MonoBehaviour:
   fogAttenuationDistance: 50
   volumetricLighting: 1
   enableDirectionalLight: 1
-  enablePointAndSpotLight: 1
+  enablePointAndSpotLight: 0
   voxelMode: 1
   albedo: {r: 1, g: 1, b: 1, a: 1}
   intensity: 1

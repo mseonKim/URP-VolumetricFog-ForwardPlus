@@ -122,46 +122,16 @@ VoxelLighting EvaluateVoxelLightingDirectional(PositionInputs posInput, float ex
     float t = t0 + tOffset;
     posInput.positionWS = ray.originWS + t * ray.jitterDirWS;
 
-    float shadowValue = 1.0;
-
-    // TODO: sun shadow
-    // // Evaluate sun shadows.
-    // if (_DirectionalShadowIndex >= 0)
-    // {
-    //     DirectionalLightData light = _DirectionalLightDatas[_DirectionalShadowIndex];
-
-    //     // Prep the light so that it works with non-volumetrics-aware code.
-    //     light.contactShadowMask  = 0;
-    //     light.shadowDimmer       = light.volumetricShadowDimmer;
-
-    //     float3 L = -light.forward;
-
-    //     // Is it worth sampling the shadow map?
-    //     if ((light.volumetricLightDimmer > 0) && (light.volumetricShadowDimmer > 0))
-    //     {
-    //         #if SHADOW_VIEW_BIAS
-    //             // Our shadows only support normal bias. Volumetrics has no access to the surface normal.
-    //             // We fake view bias by invoking the normal bias code with the view direction.
-    //             float3 shadowN = -ray.jitterDirWS;
-    //         #else
-    //             float3 shadowN = 0; // No bias
-    //         #endif // SHADOW_VIEW_BIAS
-
-    //         context.shadowValue = GetDirectionalShadowAttenuation(context.shadowContext,
-    //                                                               posInput.positionSS, posInput.positionWS, shadowN,
-    //                                                               light.shadowIndex, L);
-    //     }
-    // }
-    // else
-    // {
-    //     context.shadowValue = 1;
-    // }
-
     // Main light
     {
-        half3  color = _MainLightColor.rgb;
         float  cosTheta = dot(_MainLightPosition.xyz, ray.centerDirWS);
         float  phase = CornetteShanksPhasePartVarying(anisotropy, cosTheta);
+
+        // Evaluate sun shadow
+        float4 shadowCoord = TransformWorldToShadowCoord(posInput.positionWS);
+        shadowCoord.w = max(shadowCoord.w, 0.001);
+        float  atten = MainLightShadow(shadowCoord, posInput.positionWS, 0, 0);
+        half3  color = _MainLightColor.rgb * lerp(_VBufferScatteringIntensity, atten, atten < 1);
 
         lighting.radianceNoPhase += color * weight;
         lighting.radianceComplete += color * weight * phase;
@@ -178,7 +148,8 @@ VoxelLighting EvaluateVoxelLightingDirectional(PositionInputs posInput, float ex
         float4 lightPositionWS = _AdditionalLightsPosition[lightIndex];
         half3 color = _AdditionalLightsColor[lightIndex].rgb;
     #endif
-
+        
+        color *= _VBufferScatteringIntensity;
         float  cosTheta = dot(lightPositionWS.xyz, ray.centerDirWS);
         float  phase = CornetteShanksPhasePartVarying(anisotropy, cosTheta);
 
@@ -238,7 +209,7 @@ VoxelLighting EvaluateVoxelLightingLocal(float2 pixelCoord, float extinction, fl
 
         half3 lightDirection = half3(lightVector * rsqrt(distanceSqr));
         float attenuation = DistanceAttenuation(distanceSqr, distanceAndSpotAttenuation.xy) * AngleAttenuation(spotDirection.xyz, lightDirection, distanceAndSpotAttenuation.zw);
-        half3 L = color * attenuation;
+        half3 L = color * attenuation * _VBufferScatteringIntensity;
 
         // TODO: 1. IES & Cookie
 

@@ -13,8 +13,10 @@
 
 #define GROUP_SIZE_1D 8
 
-float4 _PrevCamPosRWS;
-TEXTURE3D(_VBufferDensity);                     // RGB = scattering, A = extinction
+float4      _PrevCamPosRWS;
+float4x4    _PrevMatrixVP;                  // _PrevViewProjMatrix is not populated correctly in compute shader. So we set this manually.
+
+TEXTURE3D(_VBufferDensity);                 // RGB = scattering, A = extinction
 RW_TEXTURE3D(float4, _VBufferLighting);
 RW_TEXTURE3D(float4, _VBufferFeedback);
 TEXTURE3D(_VBufferHistory);
@@ -221,7 +223,7 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         float4 reprojValue = SampleVBuffer(TEXTURE3D_ARGS(_VBufferHistory, s_linear_clamp_sampler),
                                            centerWS,
                                            _PrevCamPosRWS.xyz,
-                                           _PrevViewProjMatrix,
+                                           _PrevMatrixVP,
                                            _VBufferViewportSize,                // Use this instead of '_VBufferPrevViewportSize' since we assume only using 1 VBufferParamer in VolumteicLightingPass
                                            _VBufferLightingViewportScale.xyz,   // Use this instead of '_VBufferHistoryViewportScale' since we assume only using 1 VBufferParamer in VolumteicLightingPass
                                            _VBufferLightingViewportLimit.xyz,   // Use this instead of '_VBufferHistoryViewportLimit' since we assume only using 1 VBufferParamer in VolumteicLightingPass
@@ -234,8 +236,7 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         if (reprojSuccess)
         {
             // Perform temporal blending in the log space ("Pixar blend").
-            // TODO: Active this
-            // normalizedBlendValue = lerp(normalizedVoxelValue, reprojValue, ComputeHistoryWeight());
+            normalizedBlendValue = lerp(normalizedVoxelValue, reprojValue, ComputeHistoryWeight());
         }
 
         // Store the feedback for the voxel.

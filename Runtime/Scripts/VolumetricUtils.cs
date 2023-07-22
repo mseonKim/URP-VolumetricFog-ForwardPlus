@@ -247,6 +247,15 @@ namespace UniversalForwardPlusVolumetric
             return maxMip;
         }
 
+        internal static void SetCameraMatrices(CameraData cameraData, out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix, out Matrix4x4 viewProjMatrix, out Matrix4x4 invViewProjMatrix)
+        {
+            var camera = cameraData.camera;
+            viewMatrix = camera.worldToCameraMatrix;
+            projMatrix = cameraData.GetGPUProjectionMatrix();
+            viewProjMatrix = projMatrix * viewMatrix;
+            invViewProjMatrix = viewProjMatrix.inverse;
+        }
+
         /// <summary>
         /// Determine if a projection matrix is off-center (asymmetric).
         /// </summary>
@@ -334,10 +343,7 @@ namespace UniversalForwardPlusVolumetric
         internal static Matrix4x4 ComputePixelCoordToWorldSpaceViewDirectionMatrix(CameraData cameraData, Vector4 resolution)
         {
             var camera = cameraData.camera;
-            var cameraProj = cameraData.GetGPUProjectionMatrix();
-            var viewMatrix = camera.worldToCameraMatrix;
-            var viewProjMatrix = cameraProj * viewMatrix;
-            var invViewProjMatrix = viewProjMatrix.inverse;
+            SetCameraMatrices(cameraData, out var viewMatrix, out var cameraProj, out var viewProjMatrix, out var invViewProjMatrix);
 
             // In XR mode use a more generic matrix to account for asymmetry in the projection
             var useGenericMatrix = cameraData.xr.enabled;

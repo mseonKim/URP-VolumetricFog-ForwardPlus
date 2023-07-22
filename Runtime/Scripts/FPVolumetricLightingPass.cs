@@ -22,6 +22,7 @@ namespace UniversalForwardPlusVolumetric
         private RTHandle[] m_VolumetricHistoryBuffers;
         private VBufferParameters m_VBufferParameters;
         private Matrix4x4[] m_PixelCoordToViewDirWS;
+        private Matrix4x4 m_PrevMatrixVP;
 
         private Vector2[] m_xySeq;
         private bool m_FilteringNeedsExtraBuffer;
@@ -29,6 +30,7 @@ namespace UniversalForwardPlusVolumetric
         private bool m_VBufferHistoryIsValid;
         private int m_FrameIndex;
         private Vector3 m_PrevCamPosRWS;
+        private CameraType m_PrevEditorCameraType;
         private ProfilingSampler m_ProfilingSampler;
 
         public FPVolumetricLightingPass()
@@ -36,6 +38,7 @@ namespace UniversalForwardPlusVolumetric
             renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
             m_xySeq = new Vector2[7];
             m_PixelCoordToViewDirWS = new Matrix4x4[1]; // Currently xr not supported
+            m_PrevMatrixVP = Matrix4x4.identity;
         }
 
         public void Setup(VolumetricConfig config, in VBufferParameters vBufferParameters)
@@ -204,6 +207,7 @@ namespace UniversalForwardPlusVolumetric
                         var currIdx = (m_FrameIndex + 0) & 1;
                         var prevIdx = (m_FrameIndex + 1) & 1;
                         cmd.SetComputeVectorParam(m_VolumetricLightingCS, IDs._PrevCamPosRWS, m_PrevCamPosRWS);
+                        cmd.SetComputeMatrixParam(m_VolumetricLightingCS, IDs._PrevMatrixVP, m_PrevMatrixVP);
                         cmd.SetComputeTextureParam(m_VolumetricLightingCS, s_VBufferLightingCSKernal, IDs._VBufferFeedback, m_VolumetricHistoryBuffers[currIdx]);
                         cmd.SetComputeTextureParam(m_VolumetricLightingCS, s_VBufferLightingCSKernal, IDs._VBufferHistory, m_VolumetricHistoryBuffers[prevIdx]);
                     }
@@ -245,7 +249,10 @@ namespace UniversalForwardPlusVolumetric
             {
                 m_VBufferHistoryIsValid = true;
             }
+
+            // Set prev cam data
             m_PrevCamPosRWS = camera.transform.position;
+            VolumetricUtils.SetCameraMatrices(renderingData.cameraData, out var v, out var p, out m_PrevMatrixVP, out var invvp);
         }
 
         public override void OnCameraCleanup(CommandBuffer cmd)

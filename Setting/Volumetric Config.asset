@@ -33,14 +33,14 @@ MonoBehaviour:
   fogAttenuationDistance: 50
   volumetricLighting: 1
   enableDirectionalLight: 1
-  enablePointAndSpotLight: 0
+  enablePointAndSpotLight: 1
   voxelMode: 1
   albedo: {r: 1, g: 1, b: 1, a: 1}
   intensity: 1
   anisotropy: 0.18
   depthExtent: 64
-  screenResolutionPercentage: 25
-  volumeSliceCount: 170
+  screenResolutionPercentage: 12.5
+  volumeSliceCount: 128
   denoiseMode: 3
-  sampleOffsetWeight: 0.001
+  sampleOffsetWeight: 1
   sliceDistributionUniformity: 0.754

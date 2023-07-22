@@ -108,6 +108,88 @@ bool IsInRange(float x, float2 range)
     return clamp(x, range.x, range.y) == x;
 }
 
+VoxelLighting EvaluateVoxelLightingDirectional(PositionInputs posInput, float extinction, float anisotropy,
+                                               JitteredRay ray, float t0, float t1, float dt, float3 centerWS, float rndVal)
+{
+    VoxelLighting lighting;
+    ZERO_INITIALIZE(VoxelLighting, lighting);
+
+    const float NdotL = 1;
+
+    float tOffset, weight;
+    ImportanceSampleHomogeneousMedium(rndVal, extinction, dt, tOffset, weight);
+
+    float t = t0 + tOffset;
+    posInput.positionWS = ray.originWS + t * ray.jitterDirWS;
+
+    float shadowValue = 1.0;
+
+    // TODO: sun shadow
+    // // Evaluate sun shadows.
+    // if (_DirectionalShadowIndex >= 0)
+    // {
+    //     DirectionalLightData light = _DirectionalLightDatas[_DirectionalShadowIndex];
+
+    //     // Prep the light so that it works with non-volumetrics-aware code.
+    //     light.contactShadowMask  = 0;
+    //     light.shadowDimmer       = light.volumetricShadowDimmer;
+
+    //     float3 L = -light.forward;
+
+    //     // Is it worth sampling the shadow map?
+    //     if ((light.volumetricLightDimmer > 0) && (light.volumetricShadowDimmer > 0))
+    //     {
+    //         #if SHADOW_VIEW_BIAS
+    //             // Our shadows only support normal bias. Volumetrics has no access to the surface normal.
+    //             // We fake view bias by invoking the normal bias code with the view direction.
+    //             float3 shadowN = -ray.jitterDirWS;
+    //         #else
+    //             float3 shadowN = 0; // No bias
+    //         #endif // SHADOW_VIEW_BIAS
+
+    //         context.shadowValue = GetDirectionalShadowAttenuation(context.shadowContext,
+    //                                                               posInput.positionSS, posInput.positionWS, shadowN,
+    //                                                               light.shadowIndex, L);
+    //     }
+    // }
+    // else
+    // {
+    //     context.shadowValue = 1;
+    // }
+
+    // Main light
+    {
+        half3  color = _MainLightColor.rgb;
+        float  cosTheta = dot(_MainLightPosition.xyz, ray.centerDirWS);
+        float  phase = CornetteShanksPhasePartVarying(anisotropy, cosTheta);
+
+        lighting.radianceNoPhase += color * weight;
+        lighting.radianceComplete += color * weight * phase;
+    }
+
+    // Additional light
+#if USE_FORWARD_PLUS
+    for (uint lightIndex = 0; lightIndex < min(URP_FP_DIRECTIONAL_LIGHTS_COUNT, MAX_VISIBLE_LIGHTS); lightIndex++)
+    {
+    #if USE_STRUCTURED_BUFFER_FOR_LIGHT_DATA
+        float4 lightPositionWS = _AdditionalLightsBuffer[lightIndex].position;
+        half3 color = _AdditionalLightsBuffer[lightIndex].color.rgb;
+    #else
+        float4 lightPositionWS = _AdditionalLightsPosition[lightIndex];
+        half3 color = _AdditionalLightsColor[lightIndex].rgb;
+    #endif
+
+        float  cosTheta = dot(lightPositionWS.xyz, ray.centerDirWS);
+        float  phase = CornetteShanksPhasePartVarying(anisotropy, cosTheta);
+
+        lighting.radianceNoPhase += color * weight;
+        lighting.radianceComplete += color * weight * phase;
+    }
+#endif
+
+    return lighting;
+}
+
 
 VoxelLighting EvaluateVoxelLightingLocal(float2 pixelCoord, float extinction, float anisotropy,
                                          JitteredRay ray, float t0, float t1, float dt,
@@ -128,8 +210,6 @@ VoxelLighting EvaluateVoxelLightingLocal(float2 pixelCoord, float extinction, fl
     while (ClusterNext(_urp_internal_clusterIterator, lightIndex))
     {
         lightIndex += URP_FP_DIRECTIONAL_LIGHTS_COUNT;
-        // Light light = GetAdditionalLight(lightIndex, centerWS);
-        // half3 L = light.color * light.distanceAttenuation;
 
     #if USE_STRUCTURED_BUFFER_FOR_LIGHT_DATA
         float4 lightPositionWS = _AdditionalLightsBuffer[lightIndex].position;
@@ -154,19 +234,11 @@ VoxelLighting EvaluateVoxelLightingLocal(float2 pixelCoord, float extinction, fl
         float3 positionWS = ray.originWS + t * ray.jitterDirWS;
 
         float3 lightVector = lightPositionWS.xyz - positionWS * lightPositionWS.w;
-        float distanceSqr = dot(lightVector, lightVector);
+        float distanceSqr = max(dot(lightVector, lightVector), HALF_MIN);
 
-        float distanceAttenuation = DistanceAttenuation(distanceSqr, distanceAndSpotAttenuation.xy);
         half3 lightDirection = half3(lightVector * rsqrt(distanceSqr));
-
-        half SdotL = dot(spotDirection.xyz, lightDirection);
-        half angleAttenuation = saturate(SdotL * distanceAndSpotAttenuation.z + distanceAndSpotAttenuation.w);
-        angleAttenuation = angleAttenuation * angleAttenuation;
-        // float angleAttenuation = AngleAttenuation(spotDirection.xyz, lightDirection, distanceAndSpotAttenuation.zw);
-
-        float cosOuterAngle = -distanceAndSpotAttenuation.w / distanceAndSpotAttenuation.z;
-        float cosInnerAngle = rcp(distanceAndSpotAttenuation.z) + cosOuterAngle;
-        half3 L = color * distanceAttenuation * angleAttenuation;
+        float attenuation = DistanceAttenuation(distanceSqr, distanceAndSpotAttenuation.xy) * AngleAttenuation(spotDirection.xyz, lightDirection, distanceAndSpotAttenuation.zw);
+        half3 L = color * attenuation;
 
         // TODO: 1. IES & Cookie
 

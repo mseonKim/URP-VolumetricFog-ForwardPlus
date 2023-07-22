@@ -162,6 +162,7 @@ namespace UniversalForwardPlusVolumetric
 
             CoreUtils.SetKeyword(m_VolumetricLightingCS, "ENABLE_REPROJECTION", m_Config.enableReprojection);
             CoreUtils.SetKeyword(m_VolumetricLightingCS, "ENABLE_ANISOTROPY", m_Config.anisotropy != 0f);
+            CoreUtils.SetKeyword(m_VolumetricLightingCS, "SUPPORT_DIRECTIONAL_LIGHTS", m_Config.enableDirectionalLight);
             CoreUtils.SetKeyword(m_VolumetricLightingCS, "SUPPORT_LOCAL_LIGHTS", m_Config.enablePointAndSpotLight);
         }
 

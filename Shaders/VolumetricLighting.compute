@@ -3,6 +3,7 @@
 #pragma multi_compile _ _FORWARD_PLUS
 #pragma multi_compile _ ENABLE_REPROJECTION
 #pragma multi_compile _ ENABLE_ANISOTROPY
+#pragma multi_compile _ SUPPORT_DIRECTIONAL_LIGHTS
 #pragma multi_compile _ SUPPORT_LOCAL_LIGHTS
 
 #include "./VolumetricLightingCommon.hlsl"
@@ -183,10 +184,18 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         float sampleOpticalDepth = extinction * dt;
         float sampleTransmittance = exp(-sampleOpticalDepth);
 
-        // TODO: Directional
+        // Directional
+#ifdef SUPPORT_DIRECTIONAL_LIGHTS
+        {
+            VoxelLighting lighting = EvaluateVoxelLightingDirectional(posInput, extinction, anisotropy,
+                                                                        ray, t0, t1, dt, centerWS, rndVal);
+            aggregateLighting.radianceNoPhase  += lighting.radianceNoPhase;
+            aggregateLighting.radianceComplete += lighting.radianceComplete;
+        }
+#endif
 
-#ifdef SUPPORT_LOCAL_LIGHTS
         // Local
+#ifdef SUPPORT_LOCAL_LIGHTS
         {
             VoxelLighting lighting = EvaluateVoxelLightingLocal(pixelCoord, extinction, anisotropy,
                                                                 ray, t0, t1, dt, centerWS, rndVal);

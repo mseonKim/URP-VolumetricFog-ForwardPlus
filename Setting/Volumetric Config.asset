@@ -31,9 +31,9 @@ MonoBehaviour:
   baseHeight: 0
   maximumHeight: 1000
   fogAttenuationDistance: 50
-  useVolumetricLighting: 1
-  supportDirectionalLight: 1
-  supportPointAndSpotLight: 1
+  volumetricLighting: 1
+  enableDirectionalLight: 1
+  enablePointAndSpotLight: 1
   voxelMode: 1
   albedo: {r: 1, g: 1, b: 1, a: 1}
   intensity: 1

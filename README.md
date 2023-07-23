@@ -1,5 +1,7 @@
 # Universal Forward+ Volumetric Fog (Global)
 
+![Sample](./VolumetricFogSample.png) 
+
 This repository is copied from Unity HDRP Volumetric Fog.
 
 Note that this feature is working as a global fog volume. So you can't place local fog volumes while HDRP reqruies them.

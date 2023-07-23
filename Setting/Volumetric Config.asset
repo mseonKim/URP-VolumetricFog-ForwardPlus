@@ -39,8 +39,8 @@ MonoBehaviour:
   intensity: 1
   anisotropy: 0.18
   depthExtent: 64
-  screenResolutionPercentage: 12.5
-  volumeSliceCount: 128
+  screenResolutionPercentage: 25
+  volumeSliceCount: 170
   denoiseMode: 3
   sampleOffsetWeight: 1
   sliceDistributionUniformity: 0.754

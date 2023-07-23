@@ -1,6 +1,7 @@
 #pragma enable_d3d11_debug_symbols
 #pragma kernel VolumetricLighting
 #pragma multi_compile _ _FORWARD_PLUS
+#pragma multi_compile _ _LIGHT_COOKIES
 #pragma multi_compile _ ENABLE_REPROJECTION
 #pragma multi_compile _ ENABLE_ANISOTROPY
 #pragma multi_compile _ SUPPORT_DIRECTIONAL_LIGHTS
@@ -190,7 +191,7 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         // Directional
 #ifdef SUPPORT_DIRECTIONAL_LIGHTS
         {
-            VoxelLighting lighting = EvaluateVoxelLightingDirectional(posInput, extinction, anisotropy,
+            VoxelLighting lighting = EvaluateVoxelLightingDirectional(extinction, anisotropy,
                                                                         ray, t0, t1, dt, centerWS, rndVal);
             aggregateLighting.radianceNoPhase  += lighting.radianceNoPhase;
             aggregateLighting.radianceComplete += lighting.radianceComplete;

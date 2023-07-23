@@ -79,18 +79,10 @@ float3 GetViewUpDir()
 float GetInversePreviousExposureMultiplier()
 {
     return 1.0f;
-    // float exposure = GetPreviousExposureMultiplier();
-    // return rcp(exposure + (exposure == 0.0)); // zero-div guard
 }
 float GetCurrentExposureMultiplier()
 {
     return 1.0f;
-// #if SHADEROPTIONS_PRE_EXPOSITION
-//     // _ProbeExposureScale is a scale used to perform range compression to avoid saturation of the content of the probes. It is 1.0 if we are not rendering probes.
-//     return LOAD_TEXTURE2D(_ExposureTexture, int2(0, 0)).x * _ProbeExposureScale;
-// #else
-//     return _ProbeExposureScale;
-// #endif
 }
 
 // Copied from EntityLighting
@@ -108,7 +100,21 @@ bool IsInRange(float x, float2 range)
     return clamp(x, range.x, range.y) == x;
 }
 
-VoxelLighting EvaluateVoxelLightingDirectional(PositionInputs posInput, float extinction, float anisotropy,
+// Make new cookie sampling function to avoid 'cannot map expression to cs_5_0 instruction' error
+real3 SampleMainLightCookieForVoxelLighting(float3 samplePositionWS)
+{
+    if(!IsMainLightCookieEnabled())
+        return real3(1,1,1);
+
+    float2 uv = ComputeLightCookieUVDirectional(_MainLightWorldToLight, samplePositionWS, float4(1, 1, 0, 0), URP_TEXTURE_WRAP_MODE_NONE);
+    real4 color = SAMPLE_TEXTURE2D_LOD(_MainLightCookieTexture, sampler_MainLightCookieTexture, uv, 0);
+
+    return IsMainLightCookieTextureRGBFormat() ? color.rgb
+             : IsMainLightCookieTextureAlphaFormat() ? color.aaa
+             : color.rrr;
+}
+
+VoxelLighting EvaluateVoxelLightingDirectional(float extinction, float anisotropy,
                                                JitteredRay ray, float t0, float t1, float dt, float3 centerWS, float rndVal)
 {
     VoxelLighting lighting;
@@ -120,7 +126,7 @@ VoxelLighting EvaluateVoxelLightingDirectional(PositionInputs posInput, float ex
     ImportanceSampleHomogeneousMedium(rndVal, extinction, dt, tOffset, weight);
 
     float t = t0 + tOffset;
-    posInput.positionWS = ray.originWS + t * ray.jitterDirWS;
+    float3 positionWS = ray.originWS + t * ray.jitterDirWS;
 
     // Main light
     {
@@ -128,10 +134,16 @@ VoxelLighting EvaluateVoxelLightingDirectional(PositionInputs posInput, float ex
         float  phase = CornetteShanksPhasePartVarying(anisotropy, cosTheta);
 
         // Evaluate sun shadow
-        float4 shadowCoord = TransformWorldToShadowCoord(posInput.positionWS);
+        float4 shadowCoord = TransformWorldToShadowCoord(positionWS);
         shadowCoord.w = max(shadowCoord.w, 0.001);
-        float  atten = MainLightShadow(shadowCoord, posInput.positionWS, 0, 0);
-        half3  color = _MainLightColor.rgb * lerp(_VBufferScatteringIntensity, atten, atten < 1);
+        Light mainLight = GetMainLight();
+        mainLight.shadowAttenuation = MainLightShadow(shadowCoord, positionWS, 0, 0);
+        half3 color = mainLight.color * lerp(_VBufferScatteringIntensity, mainLight.shadowAttenuation, mainLight.shadowAttenuation < 1);
+
+        // Cookie
+    #if defined(_LIGHT_COOKIES)
+        color *= SampleMainLightCookieForVoxelLighting(positionWS);
+    #endif
 
         lighting.radianceNoPhase += color * weight;
         lighting.radianceComplete += color * weight * phase;
@@ -149,9 +161,15 @@ VoxelLighting EvaluateVoxelLightingDirectional(PositionInputs posInput, float ex
         half3 color = _AdditionalLightsColor[lightIndex].rgb;
     #endif
         
-        color *= _VBufferScatteringIntensity;
         float  cosTheta = dot(lightPositionWS.xyz, ray.centerDirWS);
         float  phase = CornetteShanksPhasePartVarying(anisotropy, cosTheta);
+
+        // Skip additional light shadow
+        // Cookie
+    #if defined(_LIGHT_COOKIES)
+        color *= SampleAdditionalLightCookie(lightIndex, positionWS);
+    #endif
+        color *= _VBufferScatteringIntensity;
 
         lighting.radianceNoPhase += color * weight;
         lighting.radianceComplete += color * weight * phase;
@@ -209,18 +227,21 @@ VoxelLighting EvaluateVoxelLightingLocal(float2 pixelCoord, float extinction, fl
 
         half3 lightDirection = half3(lightVector * rsqrt(distanceSqr));
         float attenuation = DistanceAttenuation(distanceSqr, distanceAndSpotAttenuation.xy) * AngleAttenuation(spotDirection.xyz, lightDirection, distanceAndSpotAttenuation.zw);
-        half3 L = color * attenuation * _VBufferScatteringIntensity;
+        color *= attenuation;
 
-        // TODO: 1. IES & Cookie
-
-        // TODO: 2. Shadow?
+        // Skip additional light shadow
+        // Cookie
+    #if defined(_LIGHT_COOKIES)
+        color *= SampleAdditionalLightCookie(lightIndex, positionWS);
+    #endif
+        color *= _VBufferScatteringIntensity;
 
         float3 centerL  = lightPositionWS.wyz - centerWS;
         float  cosTheta = dot(normalize(centerL), ray.centerDirWS);
         float  phase = CornetteShanksPhasePartVarying(anisotropy, cosTheta);
 
-        lighting.radianceNoPhase += L * weight * rcpPdf;
-        lighting.radianceComplete += L * weight * phase * rcpPdf;
+        lighting.radianceNoPhase += color * weight * rcpPdf;
+        lighting.radianceComplete += color * weight * phase * rcpPdf;
     }
 #endif
 

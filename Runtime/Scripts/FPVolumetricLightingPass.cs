@@ -256,7 +256,7 @@ namespace UniversalForwardPlusVolumetric
 
         private void CreateHistoryBuffers(Camera camera)
         {
-            if (!m_Config.volumetricLighting || !CoreUtils.IsSceneViewFogEnabled(camera))
+            if (!m_Config.volumetricLighting)
                 return;
             
             Debug.Assert(m_VolumetricHistoryBuffers == null);

@@ -21,7 +21,8 @@ namespace UniversalForwardPlusVolumetric
         private RTHandle m_VBufferLightingFilteredHandle;
         private RTHandle[] m_VolumetricHistoryBuffers;
         private VBufferParameters m_VBufferParameters;
-        private Matrix4x4[] m_PixelCoordToViewDirWS;
+        private Matrix4x4[] m_VBufferCoordToViewDirWS;
+        private Matrix4x4 m_PixelCoordToViewDirWS;
         private Matrix4x4 m_PrevMatrixVP;
 
         private Vector2[] m_xySeq;
@@ -37,7 +38,7 @@ namespace UniversalForwardPlusVolumetric
         {
             renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
             m_xySeq = new Vector2[7];
-            m_PixelCoordToViewDirWS = new Matrix4x4[1]; // Currently xr not supported
+            m_VBufferCoordToViewDirWS = new Matrix4x4[1]; // Currently xr not supported
             m_PrevMatrixVP = Matrix4x4.identity;
         }
 
@@ -140,8 +141,9 @@ namespace UniversalForwardPlusVolumetric
             var xySeqOffset = new Vector4();
             xySeqOffset.Set(m_xySeq[sampleIndex].x * m_Config.sampleOffsetWeight, m_xySeq[sampleIndex].y * m_Config.sampleOffsetWeight, VolumetricUtils.zSeq[sampleIndex], m_FrameIndex);
 
+            VolumetricUtils.GetPixelCoordToViewDirWS(cameraData, new Vector2(Screen.width, Screen.height), ref m_PixelCoordToViewDirWS);
             var viewportSize = new Vector4(vBufferViewportSize.x, vBufferViewportSize.y, 1.0f / vBufferViewportSize.x, 1.0f / vBufferViewportSize.y);
-            VolumetricUtils.GetPixelCoordToViewDirWS(cameraData, viewportSize, ref m_PixelCoordToViewDirWS);
+            VolumetricUtils.GetPixelCoordToViewDirWS(cameraData, viewportSize, ref m_VBufferCoordToViewDirWS);
 
             cmd.SetGlobalInt(IDs._VolumetricFilteringEnabled, m_Config.filterVolume ? 1 : 0);
             cmd.SetGlobalInt(IDs._VBufferHistoryIsValid, (m_Config.enableReprojection && m_VBufferHistoryIsValid) ? 1 : 0);
@@ -161,7 +163,8 @@ namespace UniversalForwardPlusVolumetric
             cmd.SetGlobalVector(IDs._VBufferSampleOffset, xySeqOffset);
             cmd.SetGlobalVector(IDs._RTHandleScale, RTHandles.rtHandleProperties.rtHandleScale);
             cmd.SetGlobalTexture(IDs._VBufferLighting, m_VBufferLightingHandle);
-            cmd.SetGlobalMatrix(IDs._VBufferCoordToViewDirWS, m_PixelCoordToViewDirWS[0]);
+            cmd.SetGlobalMatrix(IDs._VBufferCoordToViewDirWS, m_VBufferCoordToViewDirWS[0]);
+            cmd.SetGlobalMatrix(IDs._PixelCoordToViewDirWS, m_PixelCoordToViewDirWS);
 
             CoreUtils.SetKeyword(m_VolumetricLightingCS, "ENABLE_REPROJECTION", m_Config.enableReprojection);
             CoreUtils.SetKeyword(m_VolumetricLightingCS, "ENABLE_ANISOTROPY", m_Config.anisotropy != 0f);
@@ -229,15 +232,7 @@ namespace UniversalForwardPlusVolumetric
 
                 if (m_ResolveMat != null)
                 {
-                    if (m_Config.voxelMode == VoxelMode._PerPixel)
-                    {
-                        // Run per pixel pass
-                        CoreUtils.DrawFullScreen(cmd, m_ResolveMat, null, 1);
-                    }
-                    else
-                    {
-                        CoreUtils.DrawFullScreen(cmd, m_ResolveMat);
-                    }
+                    CoreUtils.DrawFullScreen(cmd, m_ResolveMat);
                 }
 
             }

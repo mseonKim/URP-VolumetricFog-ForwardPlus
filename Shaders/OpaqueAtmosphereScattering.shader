@@ -34,21 +34,5 @@ Shader "Fog/OpaqueAtmosphericScattering"
                 #pragma fragment FragVBuffer
             ENDHLSL
         }
-
-        Pass
-        {
-            Name "NoMSAAPerPixel"
-
-            Cull Off    ZWrite Off
-            Blend One One, One One
-            ZTest Less  // Required for XR occlusion mesh optimization
-
-            HLSLPROGRAM
-                #pragma multi_compile_fragment _ _FORWARD_PLUS
-                #pragma multi_compile_fragment _ ENABLE_REPROJECTION
-                #pragma vertex Vert
-                #pragma fragment FragPerPixel
-            ENDHLSL
-        }
     }
 }

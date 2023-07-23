@@ -1,0 +1,29 @@
+fileFormatVersion: 2
+guid: b674d3ecc672c9e40a6c3e580fe4b43c
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: 9801397f829a1ed42984340315cbf362, type: 3}
+  iesMetaData:
+    FileFormatVersion: LM-63-1995
+    IESPhotometricType: Type C
+    IESMaximumIntensity: 11000
+    IESMaximumIntensityUnit: Lumens
+    Manufacturer: LeoMoon Studios
+    LuminaireCatalogNumber: ICEAL2-150S-TYPE2/CG1-277
+    LuminaireDescription: 1/100W ICETRON INDUCTION 20x15"DIRECT AREALIGHT LUMINAIRE
+      MIRO4 SPEC ALUM TYPE II OPTICS & CLEAR FLAT GLASS LENS BLACK PANEL STREET SIDE 
+      SYLVANIA # QT 1x150 ICE/UNV-T
+    LampCatalogNumber: ICE100/QT150 2PIN
+    LampDescription: 
+    PrefabLightType: 0
+    SpotAngle: 120
+    iesSize: 128
+    ApplyLightAttenuation: 1
+    UseIESMaximumIntensity: 1
+    CookieCompression: 2
+    LightAimAxisRotation: -90

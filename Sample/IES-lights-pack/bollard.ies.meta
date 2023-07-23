@@ -1,0 +1,28 @@
+fileFormatVersion: 2
+guid: 3353ce3fa7843a6469028ab6e29f0352
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: 9801397f829a1ed42984340315cbf362, type: 3}
+  iesMetaData:
+    FileFormatVersion: LM-63-2002
+    IESPhotometricType: Type C
+    IESMaximumIntensity: 9000
+    IESMaximumIntensityUnit: Lumens
+    Manufacturer: LeoMoon Studios
+    LuminaireCatalogNumber: OSA6R-100PSMH120-AC
+    LuminaireDescription: 1/100W CLEAR ED17 LAMP 6"DIA 38.25"TALL WHITE BOLLARD 4.5"DIA
+      SPECULAR CONE REFLECTOR w/5.875"TALL ACRYLIC CYLINDER LENS
+    LampCatalogNumber: M90 MH100W/U/PS
+    LampDescription: 
+    PrefabLightType: 0
+    SpotAngle: 120
+    iesSize: 128
+    ApplyLightAttenuation: 1
+    UseIESMaximumIntensity: 1
+    CookieCompression: 2
+    LightAimAxisRotation: -90

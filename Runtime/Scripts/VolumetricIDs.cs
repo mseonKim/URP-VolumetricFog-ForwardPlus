@@ -40,6 +40,7 @@ namespace UniversalForwardPlusVolumetric
         public static int _RTHandleScale = Shader.PropertyToID("_RTHandleScale");
         public static int _PrevCamPosRWS = Shader.PropertyToID("_PrevCamPosRWS");
         public static int _VBufferCoordToViewDirWS = Shader.PropertyToID("_VBufferCoordToViewDirWS");
+        public static int _PixelCoordToViewDirWS = Shader.PropertyToID("_PixelCoordToViewDirWS");
         public static int _PrevMatrixVP = Shader.PropertyToID("_PrevMatrixVP");
 
         // MaxZ Generation

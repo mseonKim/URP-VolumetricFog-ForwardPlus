@@ -397,5 +397,10 @@ namespace UniversalForwardPlusVolumetric
             // }
         }
 
+        public static void GetPixelCoordToViewDirWS(CameraData cameraData, Vector4 resolution, ref Matrix4x4 transform)
+        {
+            transform = ComputePixelCoordToWorldSpaceViewDirectionMatrix(cameraData, resolution);
+        }
+
     }
 }

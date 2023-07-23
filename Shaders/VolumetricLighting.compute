@@ -1,4 +1,4 @@
-#pragma enable_d3d11_debug_symbols
+// #pragma enable_d3d11_debug_symbols
 #pragma kernel VolumetricLighting
 #pragma multi_compile _ _FORWARD_PLUS
 #pragma multi_compile _ _LIGHT_COOKIES

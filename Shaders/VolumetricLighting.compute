@@ -211,7 +211,7 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
 #ifdef ENABLE_REPROJECTION
         // Clamp here to prevent generation of NaNs.
         float4 voxelValue           = float4(aggregateLighting.radianceNoPhase, extinction * dt);
-        float4 linearizedVoxelValue = LinearizeRGBD(voxelValue);
+        float4 linearizedVoxelValue = LinearizeRGBD_Float(voxelValue);
         float4 normalizedVoxelValue = linearizedVoxelValue * rcp(dt);
         float4 normalizedBlendValue = normalizedVoxelValue;
 
@@ -247,15 +247,15 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         _VBufferFeedback[voxelCoord3] = normalizedBlendValue * float4(GetCurrentExposureMultiplier().xxx, 1);
 
         float4 linearizedBlendValue = normalizedBlendValue * dt;
-        float4 blendValue = DelinearizeRGBD(linearizedBlendValue);
+        float4 blendValue = DelinearizeRGBD_Float(linearizedBlendValue);
 
     #ifdef ENABLE_ANISOTROPY
         // Estimate the influence of the phase function on the results of the current frame.
         float3 phaseCurrFrame;
 
-        phaseCurrFrame.r = SafeDiv(aggregateLighting.radianceComplete.r, aggregateLighting.radianceNoPhase.r);
-        phaseCurrFrame.g = SafeDiv(aggregateLighting.radianceComplete.g, aggregateLighting.radianceNoPhase.g);
-        phaseCurrFrame.b = SafeDiv(aggregateLighting.radianceComplete.b, aggregateLighting.radianceNoPhase.b);
+        phaseCurrFrame.r = SafeDiv_Float(aggregateLighting.radianceComplete.r, aggregateLighting.radianceNoPhase.r);
+        phaseCurrFrame.g = SafeDiv_Float(aggregateLighting.radianceComplete.g, aggregateLighting.radianceNoPhase.g);
+        phaseCurrFrame.b = SafeDiv_Float(aggregateLighting.radianceComplete.b, aggregateLighting.radianceNoPhase.b);
 
         // Warning: in general, this does not work!
         // For a voxel with a single light, 'phaseCurrFrame' is monochromatic, and since
@@ -291,7 +291,7 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         // Compute the optical depth up to the center of the interval.
         opticalDepth += 0.5 * blendValue.a;
 
-        _VBufferLighting[voxelCoord3] = LinearizeRGBD(float4(/*FastTonemap*/(totalRadiance), opticalDepth)) * float4(GetCurrentExposureMultiplier().xxx, 1);
+        _VBufferLighting[voxelCoord3] = LinearizeRGBD_Float(float4(/*FastTonemap*/(totalRadiance), opticalDepth)) * float4(GetCurrentExposureMultiplier().xxx, 1);
 
         // Compute the optical depth up to the end of the interval.
         opticalDepth += 0.5 * blendValue.a;

@@ -100,6 +100,34 @@ bool IsInRange(float x, float2 range)
     return clamp(x, range.x, range.y) == x;
 }
 
+// To avoid half precision issue on mobile, declare float functions.
+float4 LinearizeRGBD_Float(float4 value)
+{
+    float d = value.a;
+    float a = 1 - exp(-d);
+    float r = (a >= FLT_EPS) ? (d * rcp(a)) : 1;
+    return float4(r * value.rgb, d);
+}
+float4 DelinearizeRGBA_Float(float4 value)
+{
+    float d = value.a;
+    float a = 1 - exp(-d);
+    float i = (a >= FLT_EPS) ? (a * rcp(d)) : 1;
+    return float4(i * value.rgb, a);
+}
+float4 DelinearizeRGBD_Float(real4 value)
+{
+    float d = value.a;
+    float a = 1 - exp(-d);
+    float i = (a >= FLT_EPS) ? (a * rcp(d)) : 1; // Prevent numerical explosion
+    return float4(i * value.rgb, d);
+}
+float SafeDiv_Float(float numer, float denom)
+{
+    return (numer != denom) ? numer / denom : 1;
+}
+//
+
 // Make new cookie sampling function to avoid 'cannot map expression to cs_5_0 instruction' error
 real3 SampleMainLightCookieForVoxelLighting(float3 samplePositionWS)
 {

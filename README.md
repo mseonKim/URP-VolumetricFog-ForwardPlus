@@ -27,4 +27,4 @@ This feature is available on URP Forward+ from 2022.3.0f1 (2022 LTS) version.
    
 3. Additional light shadows are not supported due to performance
 4. DiffuseGI not contributes to lighting
-5. Reprojection denoise mode is not working on mobile 
+5. Noise texture is not supported 

@@ -161,7 +161,11 @@ namespace UniversalForwardPlusVolumetric
             cmd.SetGlobalVector(IDs._VBufferDistanceEncodingParams, m_VBufferParameters.depthEncodingParams);
             cmd.SetGlobalVector(IDs._VBufferDistanceDecodingParams, m_VBufferParameters.depthDecodingParams);
             cmd.SetGlobalVector(IDs._VBufferSampleOffset, xySeqOffset);
+        #if UNITY_EDITOR    // _RTHandleScale is different for scend & game view.
+            cmd.SetGlobalVector(IDs._RTHandleScale, Vector4.one);
+        #else
             cmd.SetGlobalVector(IDs._RTHandleScale, RTHandles.rtHandleProperties.rtHandleScale);
+        #endif
             cmd.SetGlobalTexture(IDs._VBufferLighting, m_VBufferLightingHandle);
             cmd.SetGlobalMatrix(IDs._VBufferCoordToViewDirWS, m_VBufferCoordToViewDirWS[0]);
             cmd.SetGlobalMatrix(IDs._PixelCoordToViewDirWS, m_PixelCoordToViewDirWS);

@@ -11,7 +11,7 @@ namespace UniversalForwardPlusVolumetric
         public VolumetricConfig config;
         private GenerateMaxZPass m_GenerateMaxZPass;
         private FPVolumetricLightingPass m_VolumetricLightingPass;
-        private VBufferParameters vBufferParameters;
+        private VBufferParameters m_VBufferParameters;
 
         public override void Create()
         {
@@ -24,14 +24,13 @@ namespace UniversalForwardPlusVolumetric
             if (config == null)
                 return;
 
-            vBufferParameters = VolumetricUtils.ComputeVolumetricBufferParameters(config, renderingData.cameraData.camera);
-
-            m_GenerateMaxZPass.Setup(config, vBufferParameters);
-            renderer.EnqueuePass(m_GenerateMaxZPass);
+            m_VBufferParameters = VolumetricUtils.ComputeVolumetricBufferParameters(config, renderingData.cameraData.camera);
 
             if (config.volumetricLighting)
             {
-                m_VolumetricLightingPass.Setup(config, vBufferParameters);
+                m_GenerateMaxZPass.Setup(config, m_VBufferParameters);
+                renderer.EnqueuePass(m_GenerateMaxZPass);
+                m_VolumetricLightingPass.Setup(config, m_VBufferParameters);
                 renderer.EnqueuePass(m_VolumetricLightingPass);
             }
         }

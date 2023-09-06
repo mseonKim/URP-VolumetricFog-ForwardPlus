@@ -5,8 +5,6 @@ Shader "Fog/OpaqueAtmosphericScattering"
         #pragma editor_sync_compilation
         #pragma only_renderers d3d11 playstation xboxone xboxseries vulkan metal switch
 
-        #pragma multi_compile_fragment _ DEBUG_DISPLAY
-
         // #pragma enable_d3d11_debug_symbols
 
         #include "./VolumetricLightingCommon.hlsl"

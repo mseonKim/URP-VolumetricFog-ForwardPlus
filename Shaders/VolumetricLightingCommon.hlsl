@@ -27,7 +27,7 @@ CBUFFER_END
 #define _HeightFogBaseExtinction            _HeightFogParams.y
 #define _HeightFogExponents                 _HeightFogParams.zw
 
-CBUFFER_START(ShaderVariablesVolumetric)
+CBUFFER_START(ShaderVariablesVolumetricLighting)
     uint        _VolumetricFilteringEnabled;
     uint        _VBufferHistoryIsValid;
     uint        _VBufferSliceCount;
@@ -37,9 +37,9 @@ CBUFFER_START(ShaderVariablesVolumetric)
     float       _VBufferRcpSliceCount;
     float       _VBufferUnitDepthTexelSpacing;
     float       _VBufferScatteringIntensity;
+    float       _VBufferLocalScatteringIntensity;
     float       _VBufferLastSliceDist;
-    float       __vbuffer_pad00__;
-    float       __vbuffer_pad01__;
+    float       _vbuffer_pad00_;
     float4      _VBufferViewportSize;
     float4      _VBufferLightingViewportScale;
     float4      _VBufferLightingViewportLimit;
@@ -48,6 +48,24 @@ CBUFFER_START(ShaderVariablesVolumetric)
     float4      _VBufferSampleOffset;
     float4      _RTHandleScale;
     float4x4    _VBufferCoordToViewDirWS;
+CBUFFER_END
+
+CBUFFER_START(ShaderVariablesLocalVolume)
+    float4      _VolumetricMaterialObbRight;
+    float4      _VolumetricMaterialObbUp;
+    float4      _VolumetricMaterialObbExtents;
+    float4      _VolumetricMaterialObbCenter;
+    float4      _VolumetricMaterialAlbedo;
+    float4      _VolumetricMaterialRcpPosFaceFade;
+    float4      _VolumetricMaterialRcpNegFaceFade;
+    float       _VolumetricMaterialInvertFade;
+    float       _VolumetricMaterialExtinction;
+    float       _VolumetricMaterialRcpDistFadeLen;
+    float       _VolumetricMaterialEndTimesRcpDistFadeLen;
+    float       _VolumetricMaterialFalloffMode;
+    float       _LocalVolume_pad0_;
+    float       _LocalVolume_pad1_;
+    float       _LocalVolume_pad2_;
 CBUFFER_END
 
 
@@ -262,7 +280,7 @@ VoxelLighting EvaluateVoxelLightingLocal(float2 pixelCoord, float extinction, fl
     #if defined(_LIGHT_COOKIES)
         color *= SampleAdditionalLightCookie(lightIndex, positionWS);
     #endif
-        color *= _VBufferScatteringIntensity;
+        color *= _VBufferLocalScatteringIntensity;
 
         float3 centerL  = lightPositionWS.wyz - centerWS;
         float  cosTheta = dot(normalize(centerL), ray.centerDirWS);

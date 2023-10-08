@@ -28,6 +28,7 @@ namespace UniversalForwardPlusVolumetric
         public ComputeShader volumetricLightingCS;
         public ComputeShader volumetricLightingFilteringCS;
         public ComputeShader generateMaxZCS;
+        public ComputeShader defaultLocalVolumeShader;
         public Material resolveMat;
 
         [Header("Fog")]
@@ -60,8 +61,10 @@ namespace UniversalForwardPlusVolumetric
         [Tooltip("Point and spot lights are only supported for Forward+")]
         public bool enablePointAndSpotLight = true;
         public Color albedo = Color.white;
-        [Range(0f, 10f)]
+        [Range(0f, 50f)]
         public float intensity = 1f;
+        [Range(0f, 50f)]
+        public float localScatteringIntensity = 1f;
         [Range(-1f, 1f)]
         public float anisotropy;
         [Tooltip("Sets the distance (in meters) from the Camera's Near Clipping Plane to the back of the Camera's volumetric lighting buffer. The lower the distance is, the higher the fog quality is.")]

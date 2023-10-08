@@ -1,0 +1,145 @@
+//--------------------------------------------------------------------------------------------------
+// Definitions
+//--------------------------------------------------------------------------------------------------
+
+#pragma enable_d3d11_debug_symbols
+#pragma only_renderers d3d11 playstation xboxone xboxseries vulkan metal switch
+
+#pragma kernel SmokeVolumeMaterial
+
+#define GROUP_SIZE_1D     8
+
+#define LOCALVOLUMETRICFOGFALLOFFMODE_LINEAR (0)
+#define LOCALVOLUMETRICFOGFALLOFFMODE_EXPONENTIAL (1)
+
+//--------------------------------------------------------------------------------------------------
+// Included headers
+//--------------------------------------------------------------------------------------------------
+
+#include "../VolumetricLightingCommon.hlsl"
+
+//--------------------------------------------------------------------------------------------------
+// Inputs & outputs
+//--------------------------------------------------------------------------------------------------
+
+// CBUFFER_START(ShaderVariablesSmokeVolume)
+//     float      _Temp;
+// CBUFFER_END
+RW_TEXTURE3D(float4, _VBufferDensity); // RGB = sqrt(scattering), A = sqrt(extinction)
+// TEXTURE2D(float4, _MaskTexture);
+
+//--------------------------------------------------------------------------------------------------
+// Implementation
+//--------------------------------------------------------------------------------------------------
+
+float ComputeFadeFactor(float3 coordNDC, float distance)
+{
+    bool exponential = uint(_VolumetricMaterialFalloffMode) == LOCALVOLUMETRICFOGFALLOFFMODE_EXPONENTIAL;
+
+    return ComputeVolumeFadeFactor(
+        coordNDC, distance,
+        _VolumetricMaterialRcpPosFaceFade.xyz,
+        _VolumetricMaterialRcpNegFaceFade.xyz,
+        _VolumetricMaterialInvertFade,
+        _VolumetricMaterialRcpDistFadeLen,
+        _VolumetricMaterialEndTimesRcpDistFadeLen,
+        exponential
+    );
+}
+
+void SmokeVolume(float3 voxelPositionOS, float3 voxelClipSpace, inout float3 albedo, inout float extinction)
+{
+    float3 texCoord = saturate(voxelClipSpace * 0.5 + 0.5);
+    albedo = albedo;
+    extinction = extinction;
+}
+
+void FillVolumetricDensityBuffer(uint2 voxelCoord2D, JitteredRay ray)
+{
+    float t0 = DecodeLogarithmicDepthGeneralized(0, _VBufferDistanceDecodingParams);
+    float de = _VBufferRcpSliceCount; // Log-encoded distance between slices
+
+    for (uint slice = 0; slice < _VBufferSliceCount; slice++)
+    {
+        // uint3 voxelCoord = uint3(voxelCoord2D, slice + _VBufferSliceCount * unity_StereoEyeIndex);
+        uint3 voxelCoord = uint3(voxelCoord2D, slice);
+
+        float e1 = slice * de + de; // (slice + 1) / sliceCount
+        float t1 = DecodeLogarithmicDepthGeneralized(e1, _VBufferDistanceDecodingParams);
+        float dt = t1 - t0;
+        float t  = t0 + 0.5 * dt;
+
+        float3 voxelCenterWS = ray.originWS + t * ray.centerDirWS;
+
+        // Cast local volume
+        {
+            float3x3 obbFrame = float3x3(_VolumetricMaterialObbRight.xyz, _VolumetricMaterialObbUp.xyz, cross(_VolumetricMaterialObbRight.xyz, _VolumetricMaterialObbUp.xyz));
+            float3 voxelCenterBS = mul(voxelCenterWS - _VolumetricMaterialObbCenter.xyz, transpose(obbFrame));
+            float3 voxelCenterCS = (voxelCenterBS * rcp(_VolumetricMaterialObbExtents.xyz));
+            bool overlap = Max3(abs(voxelCenterCS.x), abs(voxelCenterCS.y), abs(voxelCenterCS.z)) <= 1;
+
+            float3 albedo = _VolumetricMaterialAlbedo.rgb;
+            float extinction = _VolumetricMaterialExtinction;
+            if (overlap)
+            {
+                // Do smoke shading
+                SmokeVolume(voxelCenterBS, voxelCenterCS, albedo, extinction);
+
+                float3 voxelCenterNDC = saturate(voxelCenterCS * 0.5 + 0.5);
+                // float fade = ComputeFadeFactor(voxelCenterNDC, t1);
+
+                // When multiplying fog, we need to handle specifically the blend area to avoid creating gaps in the fog
+            #if defined FOG_VOLUME_BLENDING_MULTIPLY
+                 _VBufferDensity[voxelCoord] = max(0, lerp(float4(1.0, 1.0, 1.0, 1.0), float4(saturate(albedo * extinction), extinction), fade.xxxx));
+            #else
+                // extinction *= fade;
+                 _VBufferDensity[voxelCoord] = max(0, float4(saturate(albedo * extinction), extinction));
+            #endif
+            }
+        }
+
+
+        t0 = t1;
+    }
+}
+
+[numthreads(GROUP_SIZE_1D, GROUP_SIZE_1D, 1)]
+void SmokeVolumeMaterial(uint3 dispatchThreadId : SV_DispatchThreadID,
+                         uint2 groupId          : SV_GroupID,
+                         uint2 groupThreadId    : SV_GroupThreadID)
+{
+    // UNITY_XR_ASSIGN_VIEW_INDEX(dispatchThreadId.z);
+
+    // Reminder: our voxels are sphere-capped right frustums (truncated right pyramids).
+    // The curvature of the front and back faces is quite gentle, so we can use
+    // the right frustum approximation (thus the front and the back faces are squares).
+    // Note, that since we still rely on the perspective camera model, pixels at the center
+    // of the screen correspond to larger solid angles than those at the edges.
+    // Basically, sizes of front and back faces depend on the XY coordinate.
+    // https://www.desmos.com/calculator/i3rkesvidk
+
+    float3 F = GetViewForwardDir();
+    float3 U = GetViewUpDir();
+
+    uint2 voxelCoord = dispatchThreadId.xy;
+    float2 centerCoord = voxelCoord + float2(0.5, 0.5);
+
+    // Compute a ray direction s.t. ViewSpace(rayDirWS).z = 1.
+    float3 rayDirWS       = mul(-float4(centerCoord, 1, 1), _VBufferCoordToViewDirWS).xyz;  // _VBufferCoordToViewDirWS[unity_StereoEyeIndex]
+    float3 rightDirWS     = cross(rayDirWS, U);
+    float  rcpLenRayDir   = rsqrt(dot(rayDirWS, rayDirWS));
+    float  rcpLenRightDir = rsqrt(dot(rightDirWS, rightDirWS));
+
+    JitteredRay ray;
+    ray.originWS    = GetCurrentViewPosition();
+    ray.centerDirWS = rayDirWS * rcpLenRayDir; // Normalize
+
+    float FdotD = dot(F, ray.centerDirWS);
+    float unitDistFaceSize = _VBufferUnitDepthTexelSpacing * FdotD * rcpLenRayDir;
+
+    ray.xDirDerivWS = rightDirWS * (rcpLenRightDir * unitDistFaceSize); // Normalize & rescale
+    ray.yDirDerivWS = cross(ray.xDirDerivWS, ray.centerDirWS); // Will have the length of 'unitDistFaceSize' by construction
+    ray.jitterDirWS = ray.centerDirWS;
+
+    FillVolumetricDensityBuffer(voxelCoord, ray);
+}

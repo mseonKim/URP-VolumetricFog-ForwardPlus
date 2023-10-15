@@ -161,7 +161,7 @@ real3 SampleMainLightCookieForVoxelLighting(float3 samplePositionWS)
 }
 
 VoxelLighting EvaluateVoxelLightingDirectional(float extinction, float anisotropy,
-                                               JitteredRay ray, float t0, float t1, float dt, float3 centerWS, float rndVal)
+                                               JitteredRay ray, float t0, float t1, float dt, float rndVal)
 {
     VoxelLighting lighting;
     ZERO_INITIALIZE(VoxelLighting, lighting);

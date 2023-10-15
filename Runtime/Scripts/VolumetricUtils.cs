@@ -12,11 +12,15 @@ namespace UniversalForwardPlusVolumetric
         public Vector4 depthEncodingParams;
         public Vector4 depthDecodingParams;
 
-        public VBufferParameters(Vector3Int viewportSize, float depthExtent, float camNear, float camFar, float camVFoV,
-                                 float sliceDistributionUniformity, float voxelSize)
+        public VBufferParameters(Vector3Int viewportSize, float depthExtent, Camera camera,
+                                 float sliceDistributionUniformity, float voxelSize, bool autoSliceDistribution = false)
         {
             this.viewportSize = viewportSize;
             this.voxelSize = voxelSize;
+
+            var camNear = camera.nearClipPlane;
+            var camFar = camera.farClipPlane;
+            var camVFoV = camera.fieldOfView;
 
             // The V-Buffer is sphere-capped, while the camera frustum is not.
             // We always start from the near plane of the camera.
@@ -30,6 +34,12 @@ namespace UniversalForwardPlusVolumetric
             float nearDist = camNear;
             float farDist = Math.Min(nearDist + depthExtent, farPlaneDist);
 
+            if (autoSliceDistribution)
+            {
+                // Set slice distribution by distance from (0, 0, 0)
+                var dist = Vector3.Distance(camera.transform.position, Vector3.zero);
+                sliceDistributionUniformity = Mathf.Clamp01(dist / depthExtent);
+            }
             float c = 2 - 2 * sliceDistributionUniformity; // remap [0, 1] -> [2, 0]
             c = Mathf.Max(c, 0.001f);                // Avoid NaNs
 
@@ -147,12 +157,12 @@ namespace UniversalForwardPlusVolumetric
             float voxelSize = 0;
             Vector3Int viewportSize = ComputeVolumetricViewportSize(config, camera, ref voxelSize);
 
-            return new VBufferParameters(viewportSize, config.depthExtent,
-                camera.nearClipPlane,
-                camera.farClipPlane,
-                camera.fieldOfView,
-                config.sliceDistributionUniformity,
-                voxelSize);
+            return new VBufferParameters(viewportSize,
+                                        config.depthExtent,
+                                        camera,
+                                        config.sliceDistributionUniformity,
+                                        voxelSize,
+                                        config.autoSliceDistribution);
         }
 
         public static float ComputZPlaneTexelSpacing(float planeDepth, float verticalFoV, float resolutionY)

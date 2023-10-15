@@ -26,7 +26,10 @@
 //     float      _Temp;
 // CBUFFER_END
 RW_TEXTURE3D(float4, _VBufferDensity); // RGB = sqrt(scattering), A = sqrt(extinction)
-// TEXTURE2D(float4, _MaskTexture);
+TEXTURE3D(_MaskTexture);
+TEXTURE2D(_InteractiveSmokeMask);
+SAMPLER(s_point_repeat_sampler);
+SAMPLER(s_linear_clamp_sampler);
 
 //--------------------------------------------------------------------------------------------------
 // Implementation
@@ -50,33 +53,38 @@ float ComputeFadeFactor(float3 coordNDC, float distance)
 void SmokeVolume(float3 voxelPositionOS, float3 voxelClipSpace, inout float3 albedo, inout float extinction)
 {
     float3 texCoord = saturate(voxelClipSpace * 0.5 + 0.5);
-    albedo = albedo;
-    extinction = extinction;
+    extinction = extinction * SAMPLE_TEXTURE3D_LOD(_MaskTexture, s_point_repeat_sampler, texCoord + float3(_Time.x * 2, cos(_Time.x), _Time.x * 0.5), 0).rrr;
+
+    // Flip z because smoke mask camera's VP matrix flips z 
+    texCoord.z = 1 - texCoord.z;
+    float distFromSmoke = 1.0 - SAMPLE_TEXTURE2D_LOD(_InteractiveSmokeMask, s_linear_clamp_sampler, texCoord.xz, 0).r;
+    if (distFromSmoke < texCoord.y)
+    {
+        extinction = 0;
+    }
 }
 
-void FillVolumetricDensityBuffer(uint2 voxelCoord2D, JitteredRay ray)
+void ComputeVolumetricMaterial(uint2 pixelPos, JitteredRay ray)
 {
     float t0 = DecodeLogarithmicDepthGeneralized(0, _VBufferDistanceDecodingParams);
     float de = _VBufferRcpSliceCount; // Log-encoded distance between slices
 
     for (uint slice = 0; slice < _VBufferSliceCount; slice++)
     {
-        // uint3 voxelCoord = uint3(voxelCoord2D, slice + _VBufferSliceCount * unity_StereoEyeIndex);
-        uint3 voxelCoord = uint3(voxelCoord2D, slice);
-
         float e1 = slice * de + de; // (slice + 1) / sliceCount
         float t1 = DecodeLogarithmicDepthGeneralized(e1, _VBufferDistanceDecodingParams);
         float dt = t1 - t0;
         float t  = t0 + 0.5 * dt;
 
-        float3 voxelCenterWS = ray.originWS + t * ray.centerDirWS;
+        uint3 voxelCoord = uint3(pixelPos, slice);
+        float3 voxelCenterWS = ray.originWS + t * ray.jitterDirWS;
 
         // Cast local volume
         {
             float3x3 obbFrame = float3x3(_VolumetricMaterialObbRight.xyz, _VolumetricMaterialObbUp.xyz, cross(_VolumetricMaterialObbRight.xyz, _VolumetricMaterialObbUp.xyz));
             float3 voxelCenterBS = mul(voxelCenterWS - _VolumetricMaterialObbCenter.xyz, transpose(obbFrame));
             float3 voxelCenterCS = (voxelCenterBS * rcp(_VolumetricMaterialObbExtents.xyz));
-            bool overlap = Max3(abs(voxelCenterCS.x), abs(voxelCenterCS.y), abs(voxelCenterCS.z)) <= 1;
+            bool overlap = Max3(abs(voxelCenterCS.x), abs(voxelCenterCS.y), abs(voxelCenterCS.z)) <= 1.0;
 
             float3 albedo = _VolumetricMaterialAlbedo.rgb;
             float extinction = _VolumetricMaterialExtinction;
@@ -86,18 +94,17 @@ void FillVolumetricDensityBuffer(uint2 voxelCoord2D, JitteredRay ray)
                 SmokeVolume(voxelCenterBS, voxelCenterCS, albedo, extinction);
 
                 float3 voxelCenterNDC = saturate(voxelCenterCS * 0.5 + 0.5);
-                // float fade = ComputeFadeFactor(voxelCenterNDC, t1);
+                float fade = ComputeFadeFactor(voxelCenterNDC, t1);
 
                 // When multiplying fog, we need to handle specifically the blend area to avoid creating gaps in the fog
             #if defined FOG_VOLUME_BLENDING_MULTIPLY
-                 _VBufferDensity[voxelCoord] = max(0, lerp(float4(1.0, 1.0, 1.0, 1.0), float4(saturate(albedo * extinction), extinction), fade.xxxx));
+                _VBufferDensity[voxelCoord] = max(0, lerp(float4(1.0, 1.0, 1.0, 1.0), float4(saturate(albedo * extinction), extinction), fade.xxxx));
             #else
-                // extinction *= fade;
-                 _VBufferDensity[voxelCoord] = max(0, float4(saturate(albedo * extinction), extinction));
+                extinction *= fade;
+                _VBufferDensity[voxelCoord] += max(0, float4(saturate(albedo * extinction), extinction));
             #endif
             }
         }
-
 
         t0 = t1;
     }
@@ -121,8 +128,8 @@ void SmokeVolumeMaterial(uint3 dispatchThreadId : SV_DispatchThreadID,
     float3 F = GetViewForwardDir();
     float3 U = GetViewUpDir();
 
-    uint2 voxelCoord = dispatchThreadId.xy;
-    float2 centerCoord = voxelCoord + float2(0.5, 0.5);
+    uint2 pixelPos = dispatchThreadId.xy;
+    float2 centerCoord = pixelPos + float2(0.5, 0.5);
 
     // Compute a ray direction s.t. ViewSpace(rayDirWS).z = 1.
     float3 rayDirWS       = mul(-float4(centerCoord, 1, 1), _VBufferCoordToViewDirWS).xyz;  // _VBufferCoordToViewDirWS[unity_StereoEyeIndex]
@@ -139,7 +146,8 @@ void SmokeVolumeMaterial(uint3 dispatchThreadId : SV_DispatchThreadID,
 
     ray.xDirDerivWS = rightDirWS * (rcpLenRightDir * unitDistFaceSize); // Normalize & rescale
     ray.yDirDerivWS = cross(ray.xDirDerivWS, ray.centerDirWS); // Will have the length of 'unitDistFaceSize' by construction
-    ray.jitterDirWS = ray.centerDirWS;
+    // ray.jitterDirWS = ray.centerDirWS;
+    ray.jitterDirWS = normalize(ray.centerDirWS + ray.xDirDerivWS + ray.yDirDerivWS);
 
-    FillVolumetricDensityBuffer(voxelCoord, ray);
+    ComputeVolumetricMaterial(pixelPos, ray);
 }

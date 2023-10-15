@@ -61,14 +61,13 @@ namespace UniversalForwardPlusVolumetric
         [Tooltip("Point and spot lights are only supported for Forward+")]
         public bool enablePointAndSpotLight = true;
         public Color albedo = Color.white;
-        [Range(0f, 50f)]
+        [Min(0f)]
         public float intensity = 1f;
-        [Range(0f, 50f)]
+        [Min(0f)]
         public float localScatteringIntensity = 1f;
-        [Range(-1f, 1f)]
+        [Range(-0.999f, 0.999f)]
         public float anisotropy;
         [Tooltip("Sets the distance (in meters) from the Camera's Near Clipping Plane to the back of the Camera's volumetric lighting buffer. The lower the distance is, the higher the fog quality is.")]
-        [Range(0.1f, 64f)]
         public float depthExtent = 64f;
         [Tooltip("Controls the resolution of the volumetric buffer (3D texture) along the x-axis and y-axis relative to the resolution of the screen.")]
         [Range(6.25f, 50f)]
@@ -83,6 +82,8 @@ namespace UniversalForwardPlusVolumetric
         
         [Range(0.001f, 1f)]
         public float sampleOffsetWeight = 1f;
+        [Tooltip("Controls the distribution of slices automatically based on camera distance from (0, 0, 0). If camera gets close to (0, 0, 0), the value gets 0(= exponential). It gets 1 if camera gets far from (0, 0, 0).")]
+        public bool autoSliceDistribution;
         [Tooltip("Controls the distribution of slices along the Camera's focal axis. 0 is exponential distribution and 1 is linear distribution.")]
         [Range(0, 1f)]
         public float sliceDistributionUniformity = 0.75f;

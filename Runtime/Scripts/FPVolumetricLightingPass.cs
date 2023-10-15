@@ -33,13 +33,13 @@ namespace UniversalForwardPlusVolumetric
         private bool m_VBufferHistoryIsValid;
         private int m_FrameIndex;
         private Vector3 m_PrevCamPosRWS;
-        private CameraType m_PrevEditorCameraType;
         private ProfilingSampler m_ProfilingSampler;
 
         // CBuffers
         private ShaderVariablesFog m_FogCB = new ShaderVariablesFog();
         private ShaderVariablesVolumetricLighting m_VolumetricLightingCB = new ShaderVariablesVolumetricLighting();
         private ShaderVariablesLocalVolume m_LocalVolumeCB = new ShaderVariablesLocalVolume();
+
 
         public FPVolumetricLightingPass()
         {
@@ -66,6 +66,7 @@ namespace UniversalForwardPlusVolumetric
             m_VBufferDensityHandle?.Release();
             m_VBufferLightingHandle?.Release();
             m_VBufferLightingFilteredHandle?.Release();
+            DestroyHistoryBuffers();
         }
 
         public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
@@ -154,7 +155,7 @@ namespace UniversalForwardPlusVolumetric
             var xySeqOffset = new Vector4();
             xySeqOffset.Set(m_xySeq[sampleIndex].x * m_Config.sampleOffsetWeight, m_xySeq[sampleIndex].y * m_Config.sampleOffsetWeight, VolumetricUtils.zSeq[sampleIndex], m_FrameIndex);
 
-            VolumetricUtils.GetPixelCoordToViewDirWS(cameraData, new Vector2(Screen.width, Screen.height), ref m_PixelCoordToViewDirWS);
+            VolumetricUtils.GetPixelCoordToViewDirWS(cameraData, new Vector4(Screen.width, Screen.height, 1f / Screen.width, 1f / Screen.height), ref m_PixelCoordToViewDirWS);
             var viewportSize = new Vector4(vBufferViewportSize.x, vBufferViewportSize.y, 1.0f / vBufferViewportSize.x, 1.0f / vBufferViewportSize.y);
             VolumetricUtils.GetPixelCoordToViewDirWS(cameraData, viewportSize, ref m_VBufferCoordToViewDirWS);
 
@@ -194,15 +195,25 @@ namespace UniversalForwardPlusVolumetric
             CoreUtils.SetKeyword(m_VolumetricLightingCS, "SUPPORT_LOCAL_LIGHTS", m_Config.enablePointAndSpotLight);
         }
 
-        private void UpdateVolumeShaderVariables(ref ShaderVariablesLocalVolume cb, LocalVolumetricFog volume)
+        private void UpdateVolumeShaderVariables(ref ShaderVariablesLocalVolume cb, LocalVolumetricFog volume, Camera camera)
         {
             var obb = volume.GetOBB();
+            var engineData = volume.ConvertToEngineData();
             cb._VolumetricMaterialObbRight = obb.right;
             cb._VolumetricMaterialObbUp = obb.up;
             cb._VolumetricMaterialObbExtents = new Vector3(obb.extentX, obb.extentY, obb.extentZ);
             cb._VolumetricMaterialObbCenter = obb.center;
-            cb._VolumetricMaterialAlbedo = (Vector4)volume.scatteringAlbedo;
-            cb._VolumetricMaterialExtinction = volume.extinction;
+            
+            cb._VolumetricMaterialAlbedo = engineData.albedo;
+            cb._VolumetricMaterialExtinction = engineData.extinction;
+            
+            cb._VolumetricMaterialRcpPosFaceFade = engineData.rcpPosFaceFade;
+            cb._VolumetricMaterialRcpNegFaceFade = engineData.rcpNegFaceFade;
+            cb._VolumetricMaterialInvertFade = engineData.invertFade;
+
+            cb._VolumetricMaterialRcpDistFadeLen = engineData.rcpDistFadeLen;
+            cb._VolumetricMaterialEndTimesRcpDistFadeLen = engineData.endTimesRcpDistFadeLen;
+            cb._VolumetricMaterialFalloffMode = (int)engineData.falloffMode;
         }
 
 
@@ -242,17 +253,28 @@ namespace UniversalForwardPlusVolumetric
 
                         if (cs != null)
                         {
-                            var kernal = isShaderValid ? cs.FindKernel(shaderSetting.kernalName) : cs.FindKernel("SmokeVolumeMaterial");
-                            UpdateVolumeShaderVariables(ref m_LocalVolumeCB, m_LocalVolumes[i]);
+                            // Update RT if implemented in child volume class
+                            bool hasRTUpdated = m_LocalVolumes[i].UpdateRenderTextureIfNeeded(context, cmd, ref renderingData);
+
+                            // Compute density
+                            var kernel = isShaderValid ? cs.FindKernel(shaderSetting.kernelName) : cs.FindKernel("SmokeVolumeMaterial");
+                            UpdateVolumeShaderVariables(ref m_LocalVolumeCB, m_LocalVolumes[i], camera);
                             // TODO: Set properties to shader from child local volumetric fog setting
-                            m_LocalVolumes[i].SetComputeShaderProperties(cmd);
-                            cmd.SetComputeTextureParam(cs, kernal, IDs._VBufferDensity, m_VBufferDensityHandle);
+                            m_LocalVolumes[i].SetComputeShaderProperties(cmd, cs, kernel);
+                            cmd.SetComputeTextureParam(cs, kernel, IDs._VBufferDensity, m_VBufferDensityHandle);
                             ConstantBuffer.Push(cmd, m_LocalVolumeCB, cs, IDs._ShaderVariablesLocalVolume);
-                            cmd.DispatchCompute(cs, kernal, width, height, 1);
+                            cmd.DispatchCompute(cs, kernel, width, height, 1);
+
+                            // Rollback render target
+                            if (hasRTUpdated)
+                            {
+                                CoreUtils.SetRenderTarget(cmd, renderingData.cameraData.renderer.cameraColorTargetHandle, ClearFlag.None);
+                                context.ExecuteCommandBuffer(cmd);
+                                cmd.Clear();
+                            }
                         }
                     }
                 }
-
 
                 // VBuffer Lighting
                 if (m_VolumetricLightingCS != null

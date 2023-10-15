@@ -170,13 +170,9 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         // https://en.wikipedia.org/wiki/Stochastic_universal_sampling
         float perPixelRandomOffset = GenerateHashedRandomFloat(voxelCoord);
 
-    #ifdef ENABLE_REPROJECTION
         // This is a time-based sequence of 7 equidistant numbers from 1/14 to 13/14.
         // Each of them is the centroid of the interval of length 2/14.
         float rndVal = frac(perPixelRandomOffset + _VBufferSampleOffset.z);
-    #else
-        float rndVal = frac(perPixelRandomOffset + 0.5);
-    #endif
 
 
         VoxelLighting aggregateLighting;
@@ -192,7 +188,7 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
 #ifdef SUPPORT_DIRECTIONAL_LIGHTS
         {
             VoxelLighting lighting = EvaluateVoxelLightingDirectional(extinction, anisotropy,
-                                                                        ray, t0, t1, dt, centerWS, rndVal);
+                                                                        ray, t0, t1, dt, rndVal);
             aggregateLighting.radianceNoPhase  += lighting.radianceNoPhase;
             aggregateLighting.radianceComplete += lighting.radianceComplete;
         }

@@ -210,12 +210,23 @@ VoxelLighting EvaluateVoxelLightingDirectional(float extinction, float anisotrop
         float  cosTheta = dot(lightPositionWS.xyz, ray.centerDirWS);
         float  phase = CornetteShanksPhasePartVarying(anisotropy, cosTheta);
 
-        // Skip additional light shadow
+    #if SUPPORT_ADDITIONAL_SHADOWS
+        // Directional lights store direction in lightPosition.xyz and have .w set to 0.0.
+        // This way the following code will work for both directional and punctual lights.
+        float3 lightVector = lightPositionWS.xyz - positionWS * lightPositionWS.w;
+        float distanceSqr = max(dot(lightVector, lightVector), HALF_MIN);
+
+        half3 lightDirection = half3(lightVector * rsqrt(distanceSqr));
+        half shadowAtten = AdditionalLightRealtimeShadow(lightIndex, positionWS, lightDirection);
+        color *= lerp(_VBufferScatteringIntensity, shadowAtten, shadowAtten < 1);
+    #else
+        color *= _VBufferScatteringIntensity;
+    #endif
+
         // Cookie
     #if defined(_LIGHT_COOKIES)
         color *= SampleAdditionalLightCookie(lightIndex, positionWS);
     #endif
-        color *= _VBufferScatteringIntensity;
 
         lighting.radianceNoPhase += color * weight;
         lighting.radianceComplete += color * weight * phase;
@@ -275,12 +286,17 @@ VoxelLighting EvaluateVoxelLightingLocal(float2 pixelCoord, float extinction, fl
         float attenuation = DistanceAttenuation(distanceSqr, distanceAndSpotAttenuation.xy) * AngleAttenuation(spotDirection.xyz, lightDirection, distanceAndSpotAttenuation.zw);
         color *= attenuation;
 
-        // Skip additional light shadow
+    #if SUPPORT_ADDITIONAL_SHADOWS
+        half shadowAtten = AdditionalLightRealtimeShadow(lightIndex, positionWS, lightDirection);
+        color *= lerp(_VBufferLocalScatteringIntensity, shadowAtten, shadowAtten < 1);
+    #else
+        color *= _VBufferLocalScatteringIntensity;
+    #endif
+
         // Cookie
     #if defined(_LIGHT_COOKIES)
         color *= SampleAdditionalLightCookie(lightIndex, positionWS);
     #endif
-        color *= _VBufferLocalScatteringIntensity;
 
         float3 centerL  = lightPositionWS.wyz - centerWS;
         float  cosTheta = dot(normalize(centerL), ray.centerDirWS);

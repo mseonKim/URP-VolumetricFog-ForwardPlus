@@ -60,6 +60,7 @@ namespace UniversalForwardPlusVolumetric
         public bool enableDirectionalLight = true;
         [Tooltip("Point and spot lights are only supported for Forward+")]
         public bool enablePointAndSpotLight = true;
+        public bool enableAdditionalShadow = false;
         public Color albedo = Color.white;
         [Min(0f)]
         public float intensity = 1f;

@@ -6,7 +6,9 @@
 #pragma multi_compile _ ENABLE_ANISOTROPY
 #pragma multi_compile _ SUPPORT_DIRECTIONAL_LIGHTS
 #pragma multi_compile _ SUPPORT_LOCAL_LIGHTS
+#pragma multi_compile _ SUPPORT_ADDITIONAL_SHADOWS
 #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
+#pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS
 
 #include "./VolumetricLightingCommon.hlsl"
 #include "./VBuffer.hlsl"

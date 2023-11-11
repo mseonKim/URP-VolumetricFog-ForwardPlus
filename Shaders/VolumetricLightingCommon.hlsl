@@ -245,10 +245,6 @@ VoxelLighting EvaluateVoxelLightingLocal(float2 pixelCoord, float extinction, fl
     ZERO_INITIALIZE(VoxelLighting, lighting);
 
 #if USE_FORWARD_PLUS
-    float sampleOpticalDepth = extinction * dt;
-    float sampleTransmittance = exp(-sampleOpticalDepth);
-    float rcpExtinction = rcp(extinction);
-    float weight = (rcpExtinction - rcpExtinction * sampleTransmittance) * rcpExtinction;
 
     uint lightIndex;
     ClusterIterator _urp_internal_clusterIterator = ClusterInit(GetNormalizedScreenSpaceUV(pixelCoord), centerWS, 0);
@@ -299,11 +295,14 @@ VoxelLighting EvaluateVoxelLightingLocal(float2 pixelCoord, float extinction, fl
     #endif
 
         float3 centerL  = lightPositionWS.wyz - centerWS;
-        float  cosTheta = dot(normalize(centerL), ray.centerDirWS);
+        float  cosTheta = dot(centerL, ray.centerDirWS) * rsqrt(dot(centerL, centerL));
         float  phase = CornetteShanksPhasePartVarying(anisotropy, cosTheta);
 
-        lighting.radianceNoPhase += color * weight * rcpPdf;
-        lighting.radianceComplete += color * weight * phase * rcpPdf;
+        // Compute transmittance from 't0' to 't'.
+        float weight = TransmittanceHomogeneousMedium(extinction, t - t0) * rcpPdf;
+
+        lighting.radianceNoPhase += color * weight;
+        lighting.radianceComplete += color * weight * phase;
     }
 #endif
 

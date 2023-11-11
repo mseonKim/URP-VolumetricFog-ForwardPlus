@@ -22,10 +22,11 @@
 // Inputs & outputs
 //--------------------------------------------------------------------------------------------------
 
-// CBUFFER_START(ShaderVariablesSmokeVolume)
-//     float      _Temp;
-// CBUFFER_END
-float _SmokeCameraFarPlane;
+CBUFFER_START(ShaderVariablesSmokeVolume)
+    // float _SmokeCameraFarPlane;
+    float4 _SmokeVolumeParams0; // (windSpeed, counterFlowSpeed, windDirection.xy)
+    float4 _SmokeVolumeParams1; // (tiling, detailNoiseTiling, flatten) 
+CBUFFER_END
 RW_TEXTURE3D(float4, _VBufferDensity); // RGB = sqrt(scattering), A = sqrt(extinction)
 TEXTURE2D(_MaskTexture);
 TEXTURE2D(_InteractiveSmokeMask);
@@ -59,17 +60,16 @@ float4 InverseLerp(float4 A, float4 B, float4 T)
 
 void GetSmokeVolumeData(float3 voxelPositionOS, float3 voxelClipSpace, out float3 albedo, out float extinction)
 {
-    const float tiling = 0.5;
-    const float flatten = 2;
-    const float detailTiling = 0.85;
-    const float windSpeed = 1.5;
-    const float3 windDir = float3(1, 0, 0);
-    const float counterFlowSpeed = 1.5;
+    const float windSpeed = _SmokeVolumeParams0.x;
+    const float2 windDir = _SmokeVolumeParams0.zw;
+    const float counterFlowSpeed = _SmokeVolumeParams0.y;
+    const float tiling = _SmokeVolumeParams1.x;
+    const float detailTiling = _SmokeVolumeParams1.y;
+    const float flatten = _SmokeVolumeParams1.z;
 
     const float3 positionSS = voxelClipSpace;
     float3 texCoord = saturate(voxelClipSpace * 0.5 + 0.5);
-    texCoord.y *= flatten;
-    float3 uv3 = float3(positionSS.x, texCoord.y, positionSS.z);
+    float3 uv3 = float3(positionSS.x, texCoord.y * flatten, positionSS.z);
 
     // extinction = extinction * SAMPLE_TEXTURE3D_LOD(_MaskTexture, s_point_repeat_sampler, texCoord + float3(_Time.x * 2, cos(_Time.x), _Time.x * 0.5), 0).rrr;
     const float2 uvNoise = windDir.xy * (windSpeed * _Time.x);
@@ -83,10 +83,11 @@ void GetSmokeVolumeData(float3 voxelPositionOS, float3 voxelClipSpace, out float
     albedo = 1;
 
     // Flip z because smoke mask camera's VP matrix flips z
-    //uv3.z = 1 - uv3.z;
-    //float distFromSmoke = 1.0 - SAMPLE_TEXTURE2D_LOD(_InteractiveSmokeMask, s_linear_clamp_sampler, uv3.xz, 0).r;
+    //texCoord.z = 1 - texCoord.z;
+    //float distFromSmoke = 1.0 - SAMPLE_TEXTURE2D_LOD(_InteractiveSmokeMask, s_linear_clamp_sampler, texCoord.xz, 0).r;
     //float distToNormalized = _SmokeCameraFarPlane / _VolumetricMaterialObbExtents.y;
-    //if (distFromSmoke * distToNormalized < texCoord.y)
+    //float delta = (distFromSmoke * distToNormalized - texCoord.y);
+    //if (delta < 0)
     //{
     //    extinction = 0;
     //}

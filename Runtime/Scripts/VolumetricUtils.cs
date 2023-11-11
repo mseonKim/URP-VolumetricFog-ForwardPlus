@@ -38,7 +38,9 @@ namespace UniversalForwardPlusVolumetric
             {
                 // Set slice distribution by distance from (0, 0, 0)
                 var dist = Vector3.Distance(camera.transform.position, Vector3.zero);
-                sliceDistributionUniformity = Mathf.Clamp01(dist / depthExtent);
+                var x = dist / depthExtent;
+                // For distant view, 1 is the best to reduce ray artifact. So force to make one if the distance is greater than half of the depth extent.
+                sliceDistributionUniformity = Mathf.Clamp01(2 * x); // rcp(0.5) = 2
             }
             float c = 2 - 2 * sliceDistributionUniformity; // remap [0, 1] -> [2, 0]
             c = Mathf.Max(c, 0.001f);                // Avoid NaNs

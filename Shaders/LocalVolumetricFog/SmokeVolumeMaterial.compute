@@ -25,11 +25,13 @@
 // CBUFFER_START(ShaderVariablesSmokeVolume)
 //     float      _Temp;
 // CBUFFER_END
+float _SmokeCameraFarPlane;
 RW_TEXTURE3D(float4, _VBufferDensity); // RGB = sqrt(scattering), A = sqrt(extinction)
-TEXTURE3D(_MaskTexture);
+TEXTURE2D(_MaskTexture);
 TEXTURE2D(_InteractiveSmokeMask);
 SAMPLER(s_point_repeat_sampler);
 SAMPLER(s_linear_clamp_sampler);
+SAMPLER(s_linear_repeat_sampler);
 
 //--------------------------------------------------------------------------------------------------
 // Implementation
@@ -50,18 +52,44 @@ float ComputeFadeFactor(float3 coordNDC, float distance)
     );
 }
 
-void SmokeVolume(float3 voxelPositionOS, float3 voxelClipSpace, inout float3 albedo, inout float extinction)
+float4 InverseLerp(float4 A, float4 B, float4 T)
 {
-    float3 texCoord = saturate(voxelClipSpace * 0.5 + 0.5);
-    extinction = extinction * SAMPLE_TEXTURE3D_LOD(_MaskTexture, s_point_repeat_sampler, texCoord + float3(_Time.x * 2, cos(_Time.x), _Time.x * 0.5), 0).rrr;
+    return (T - A) / (B - A);
+}
 
-    // Flip z because smoke mask camera's VP matrix flips z 
-    texCoord.z = 1 - texCoord.z;
-    float distFromSmoke = 1.0 - SAMPLE_TEXTURE2D_LOD(_InteractiveSmokeMask, s_linear_clamp_sampler, texCoord.xz, 0).r;
-    if (distFromSmoke < texCoord.y)
-    {
-        extinction = 0;
-    }
+void GetSmokeVolumeData(float3 voxelPositionOS, float3 voxelClipSpace, out float3 albedo, out float extinction)
+{
+    const float tiling = 0.5;
+    const float flatten = 2;
+    const float detailTiling = 0.85;
+    const float windSpeed = 1.5;
+    const float3 windDir = float3(1, 0, 0);
+    const float counterFlowSpeed = 1.5;
+
+    const float3 positionSS = voxelClipSpace;
+    float3 texCoord = saturate(voxelClipSpace * 0.5 + 0.5);
+    texCoord.y *= flatten;
+    float3 uv3 = float3(positionSS.x, texCoord.y, positionSS.z);
+
+    // extinction = extinction * SAMPLE_TEXTURE3D_LOD(_MaskTexture, s_point_repeat_sampler, texCoord + float3(_Time.x * 2, cos(_Time.x), _Time.x * 0.5), 0).rrr;
+    const float2 uvNoise = windDir.xy * (windSpeed * _Time.x);
+    const float2 detailUVNoise = windDir.xy * (counterFlowSpeed * _Time.x);
+    float maskVal = SAMPLE_TEXTURE2D_LOD(_MaskTexture, s_linear_repeat_sampler, uv3.xz * tiling + uvNoise, 0).r;
+    float detailVal = SAMPLE_TEXTURE2D_LOD(_MaskTexture, s_linear_repeat_sampler, uv3.xz * detailTiling + detailUVNoise, 0).r;
+    float heightShapeNoise = 1 - saturate(InverseLerp(0, maskVal, uv3.y));
+    float finalNoise = InverseLerp(0, detailVal, heightShapeNoise);
+
+    extinction = saturate(finalNoise);
+    albedo = 1;
+
+    // Flip z because smoke mask camera's VP matrix flips z
+    //uv3.z = 1 - uv3.z;
+    //float distFromSmoke = 1.0 - SAMPLE_TEXTURE2D_LOD(_InteractiveSmokeMask, s_linear_clamp_sampler, uv3.xz, 0).r;
+    //float distToNormalized = _SmokeCameraFarPlane / _VolumetricMaterialObbExtents.y;
+    //if (distFromSmoke * distToNormalized < texCoord.y)
+    //{
+    //    extinction = 0;
+    //}
 }
 
 void ComputeVolumetricMaterial(uint2 pixelPos, JitteredRay ray)
@@ -71,42 +99,42 @@ void ComputeVolumetricMaterial(uint2 pixelPos, JitteredRay ray)
 
     for (uint slice = 0; slice < _VBufferSliceCount; slice++)
     {
-        float e1 = slice * de + de; // (slice + 1) / sliceCount
-        float t1 = DecodeLogarithmicDepthGeneralized(e1, _VBufferDistanceDecodingParams);
-        float dt = t1 - t0;
-        float t  = t0 + 0.5 * dt;
+        float e1 = ((float)slice + 0.5) * de + de;
+        float sliceDistance = DecodeLogarithmicDepthGeneralized(e1, _VBufferDistanceDecodingParams);
+        // float dt = t1 - t0;
+        // float t  = t0 + 0.5 * dt;
 
         uint3 voxelCoord = uint3(pixelPos, slice);
-        float3 voxelCenterWS = ray.originWS + t * ray.jitterDirWS;
+        float3 voxelCenterWS = ray.originWS + sliceDistance * ray.centerDirWS;
 
         // Cast local volume
+        float3x3 obbFrame = float3x3(_VolumetricMaterialObbRight.xyz, _VolumetricMaterialObbUp.xyz, cross(_VolumetricMaterialObbRight.xyz, _VolumetricMaterialObbUp.xyz));
+        float3 voxelCenterBS = mul(voxelCenterWS - _VolumetricMaterialObbCenter.xyz, transpose(obbFrame));
+        float3 voxelCenterCS = (voxelCenterBS * rcp(_VolumetricMaterialObbExtents.xyz));
+        bool overlap = Max3(abs(voxelCenterCS.x), abs(voxelCenterCS.y), abs(voxelCenterCS.z)) <= 1;
+
+        if (overlap)
         {
-            float3x3 obbFrame = float3x3(_VolumetricMaterialObbRight.xyz, _VolumetricMaterialObbUp.xyz, cross(_VolumetricMaterialObbRight.xyz, _VolumetricMaterialObbUp.xyz));
-            float3 voxelCenterBS = mul(voxelCenterWS - _VolumetricMaterialObbCenter.xyz, transpose(obbFrame));
-            float3 voxelCenterCS = (voxelCenterBS * rcp(_VolumetricMaterialObbExtents.xyz));
-            bool overlap = Max3(abs(voxelCenterCS.x), abs(voxelCenterCS.y), abs(voxelCenterCS.z)) <= 1.0;
+            float extinction;
+            float3 albedo;
+            GetSmokeVolumeData(voxelCenterBS, voxelCenterCS, albedo, extinction);
 
-            float3 albedo = _VolumetricMaterialAlbedo.rgb;
-            float extinction = _VolumetricMaterialExtinction;
-            if (overlap)
-            {
-                // Do smoke shading
-                SmokeVolume(voxelCenterBS, voxelCenterCS, albedo, extinction);
+            extinction *= _VolumetricMaterialExtinction;
+            albedo *= _VolumetricMaterialAlbedo.rgb;
 
-                float3 voxelCenterNDC = saturate(voxelCenterCS * 0.5 + 0.5);
-                float fade = ComputeFadeFactor(voxelCenterNDC, t1);
+            float3 voxelCenterNDC = saturate(voxelCenterCS * 0.5 + 0.5);
+            float fade = ComputeFadeFactor(voxelCenterNDC, sliceDistance);
 
-                // When multiplying fog, we need to handle specifically the blend area to avoid creating gaps in the fog
-            #if defined FOG_VOLUME_BLENDING_MULTIPLY
-                _VBufferDensity[voxelCoord] = max(0, lerp(float4(1.0, 1.0, 1.0, 1.0), float4(saturate(albedo * extinction), extinction), fade.xxxx));
-            #else
-                extinction *= fade;
-                _VBufferDensity[voxelCoord] += max(0, float4(saturate(albedo * extinction), extinction));
-            #endif
-            }
+            // When multiplying fog, we need to handle specifically the blend area to avoid creating gaps in the fog
+        #if defined(FOG_VOLUME_BLENDING_MULTIPLY)
+            _VBufferDensity[voxelCoord] += max(0, lerp(float4(1.0, 1.0, 1.0, 1.0), float4(saturate(albedo * extinction), extinction), fade.xxxx));
+        #else
+            extinction *= fade;
+            _VBufferDensity[voxelCoord] += max(0, float4(saturate(albedo * extinction), extinction));
+        #endif
         }
 
-        t0 = t1;
+        // t0 = t1;
     }
 }
 

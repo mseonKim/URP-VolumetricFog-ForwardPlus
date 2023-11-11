@@ -24,26 +24,27 @@ MonoBehaviour:
   resolveMat: {fileID: 2100000, guid: 2acfffc3c62e9b24b813c8247c7ab5b7, type: 2}
   enabled: 1
   colorMode: 1
-  color: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  color: {r: 0.8018868, g: 0.8018868, b: 0.8018868, a: 1}
   tint: {r: 1, g: 1, b: 1, a: 1}
   maxFogDistance: 5000
   mipFogMaxMip: 0.5
   mipFogNear: 0
   mipFogFar: 1000
   baseHeight: 0
-  maximumHeight: 10
-  fogAttenuationDistance: 400
+  maximumHeight: 50
+  fogAttenuationDistance: 120
   volumetricLighting: 1
   enableDirectionalLight: 1
   enablePointAndSpotLight: 1
+  enableAdditionalShadow: 1
   albedo: {r: 1, g: 1, b: 1, a: 1}
-  intensity: 100
-  localScatteringIntensity: 0.4
-  anisotropy: 0.08
-  depthExtent: 120
+  intensity: 1
+  localScatteringIntensity: 100
+  anisotropy: 0
+  depthExtent: 100
   screenResolutionPercentage: 12.5
-  volumeSliceCount: 170
+  volumeSliceCount: 256
   denoiseMode: 3
-  sampleOffsetWeight: 1
+  sampleOffsetWeight: 0.959
   autoSliceDistribution: 1
-  sliceDistributionUniformity: 0.166
+  sliceDistributionUniformity: 0.944

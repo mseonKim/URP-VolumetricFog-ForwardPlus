@@ -31,9 +31,13 @@ namespace UniversalForwardPlusVolumetric
     public class SmokeVolume : LocalVolumetricFog
     {
         private static ShaderTagId k_ShaderTagId;
-        private readonly static int _MaskTexture = Shader.PropertyToID("_MaskTexture");
-        private readonly static int _InteractiveSmokeMask = Shader.PropertyToID("_InteractiveSmokeMask");
-        private readonly static int _SmokeVolumeViewProjM = Shader.PropertyToID("_SmokeVolumeViewProjM");
+        private static class IDs
+        {
+            public readonly static int _MaskTexture = Shader.PropertyToID("_MaskTexture");
+            public readonly static int _InteractiveSmokeMask = Shader.PropertyToID("_InteractiveSmokeMask");
+            public readonly static int _SmokeVolumeViewProjM = Shader.PropertyToID("_SmokeVolumeViewProjM");
+            public readonly static int _SmokeCameraFarPlane = Shader.PropertyToID("_SmokeCameraFarPlane");
+        }
 
         [Header("Smoke")]
         public Vector3 speed;
@@ -50,8 +54,9 @@ namespace UniversalForwardPlusVolumetric
 
         public override void SetComputeShaderProperties(CommandBuffer cmd, ComputeShader cs, int kernel)
         {
-            cmd.SetComputeTextureParam(cs, kernel, _MaskTexture, mask);
-            cmd.SetComputeTextureParam(cs, kernel, _InteractiveSmokeMask, smokeMaskRT);
+            cmd.SetComputeTextureParam(cs, kernel, IDs._MaskTexture, mask);
+            cmd.SetComputeTextureParam(cs, kernel, IDs._InteractiveSmokeMask, smokeMaskRT);
+            cmd.SetComputeFloatParam(cs, IDs._SmokeCameraFarPlane, maskCamera.farClipPlane);
         }
 
         public override bool UpdateRenderTextureIfNeeded(ScriptableRenderContext context, CommandBuffer cmd,  ref RenderingData renderingData)
@@ -63,7 +68,7 @@ namespace UniversalForwardPlusVolumetric
             var drawSettings = RenderingUtils.CreateDrawingSettings(k_ShaderTagId, ref renderingData, SortingCriteria.CommonOpaque);
 
             CoreUtils.SetRenderTarget(cmd, smokeMaskRT, ClearFlag.Color);
-            cmd.SetGlobalMatrix(_SmokeVolumeViewProjM, maskCamera.previousViewProjectionMatrix);
+            cmd.SetGlobalMatrix(IDs._SmokeVolumeViewProjM, maskCamera.previousViewProjectionMatrix);
             context.ExecuteCommandBuffer(cmd);
             cmd.Clear();
             context.DrawRenderers(renderingData.cullResults, ref drawSettings, ref filteringSettings);

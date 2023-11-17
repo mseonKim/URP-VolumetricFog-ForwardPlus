@@ -63,9 +63,9 @@ namespace UniversalForwardPlusVolumetric
         public bool enableAdditionalShadow = false;
         public Color albedo = Color.white;
         [Min(0f)]
-        public float intensity = 1f;
+        public float directionalScatteringIntensity = 1f;
         [Min(0f)]
-        public float localScatteringIntensity = 1f;
+        public float localScatteringIntensity = 100f;
         [Range(-0.999f, 0.999f)]
         public float anisotropy;
         [Tooltip("Sets the distance (in meters) from the Camera's Near Clipping Plane to the back of the Camera's volumetric lighting buffer. The lower the distance is, the higher the fog quality is.")]

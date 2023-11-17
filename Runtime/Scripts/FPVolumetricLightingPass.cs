@@ -168,7 +168,7 @@ namespace UniversalForwardPlusVolumetric
             m_VolumetricLightingCB._VBufferVoxelSize = m_VBufferParameters.voxelSize;
             m_VolumetricLightingCB._VBufferRcpSliceCount = 1f / vBufferViewportSize.z;
             m_VolumetricLightingCB._VBufferUnitDepthTexelSpacing = unitDepthTexelSpacing;
-            m_VolumetricLightingCB._VBufferScatteringIntensity = m_Config.intensity;
+            m_VolumetricLightingCB._VBufferScatteringIntensity = m_Config.directionalScatteringIntensity;
             m_VolumetricLightingCB._VBufferLocalScatteringIntensity = m_Config.localScatteringIntensity;
             m_VolumetricLightingCB._VBufferLastSliceDist = m_VBufferParameters.ComputeLastSliceDistance((uint)vBufferViewportSize.z);
             m_VolumetricLightingCB._VBufferViewportSize = viewportSize;

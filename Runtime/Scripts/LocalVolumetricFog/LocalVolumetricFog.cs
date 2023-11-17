@@ -85,9 +85,9 @@ namespace UniversalForwardPlusVolumetric
         public LocalVolumeShaderSetting volumeShaderSetting;
 
         /// <summary>Edge fade factor along the positive X, Y and Z axes.</summary>
-        public Vector3 positiveFade = Vector3.one * 0.1f;
+        public Vector3 positiveFade = Vector3.one * 0.5f;
         /// <summary>Edge fade factor along the negative X, Y and Z axes.</summary>
-        public Vector3 negativeFade = Vector3.one * 0.1f;
+        public Vector3 negativeFade = Vector3.one * 0.5f;
         /// <summary>Inverts the fade gradient.</summary>
         public bool invertFade;
         /// <summary>Distance at which density fading starts.</summary>
@@ -169,7 +169,7 @@ namespace UniversalForwardPlusVolumetric
                 // m_Collider.enabled = false;
             }
 #else
-            // m_Collider.enabled = false;
+            m_Collider.enabled = false;
 #endif
         }
 

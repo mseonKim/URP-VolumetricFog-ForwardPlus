@@ -47,4 +47,4 @@ MonoBehaviour:
   denoiseMode: 3
   sampleOffsetWeight: 0.959
   autoSliceDistribution: 1
-  sliceDistributionUniformity: 0.944
+  sliceDistributionUniformity: 1

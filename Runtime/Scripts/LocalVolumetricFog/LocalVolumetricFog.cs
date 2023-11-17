@@ -82,7 +82,7 @@ namespace UniversalForwardPlusVolumetric
         [Min(0.05f), Tooltip("Density at the base of the fog. Determines how far you can see through the fog in meters.")]
         public float fogDistance = 150; // meanFreePath
         public Texture mask;
-        public LocalVolumeShaderSetting volumeShaderSetting;
+        [HideInInspector] public LocalVolumeShaderSetting volumeShaderSetting; // unused currently
 
         /// <summary>Edge fade factor along the positive X, Y and Z axes.</summary>
         public Vector3 positiveFade = Vector3.one * 0.5f;

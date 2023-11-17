@@ -20,11 +20,12 @@ This package is available on URP Forward+ from 2022.3.0f1 (2022 LTS) version.
 
 
 ## Smoke Volume
-While this package assumes a global volume, you can put a local smoke volume to make a ground smoke effect for a specific area. Due to performance, it supports 4 smoke volumes at maximum.
+While this package assumes a global volume, you can put a local smoke volume to make a ground smoke effect for a specific area. Smoke volume component uses a box collider to determine its area. Due to performance, it supports 4 smoke volumes at maximum.
 
 To add a smoke volume to your scene, create a new gameObject and add 'Smoke Volume' component to the gameObject. You might need to create your own noise texture to use, but I added a default noise texture which can be found at 'Runtime/Textures/' directory.
 
-![Smoke Volume](./Documentation~/Images/Smoke.png) 
+![Smoke Volume](./Documentation~/Images/Smoke.png)
+![Smoke Volume Component](./Documentation~/Images/SmokeVolumeComponent.png)
 
 
 ## Limitations
@@ -35,5 +36,5 @@ To add a smoke volume to your scene, create a new gameObject and add 'Smoke Volu
    
 3. DiffuseGI does not contribute to lighting
 4. Noise texture is not supported 
-5. The number of Local Smoke Volume is 4 at maximum.
+5. The number of LocalSmokeVolume is 4 at maximum.
 6. Volumetric lighting is only enabled in a scene view in edit mode. If playing, only enabled in a game view.

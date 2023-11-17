@@ -35,5 +35,5 @@ To add a smoke volume to your scene, create a new gameObject and add 'Smoke Volu
    
 3. DiffuseGI does not contribute to lighting
 4. Noise texture is not supported 
-5. The number of Local Smoke Volumes is 4 at maximum.
+5. The number of Local Smoke Volume is 4 at maximum.
 6. Volumetric lighting is only enabled in a scene view in edit mode. If playing, only enabled in a game view.

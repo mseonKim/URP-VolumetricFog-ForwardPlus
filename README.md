@@ -5,8 +5,10 @@
 This repository is copied from Unity HDRP Volumetric Fog.
 
 Note that this feature is working as a global fog volume while HDRP requires local volumes.
+Since it shows unexpected behaviors when the screen size of Scene View and the screen size of Game View are different,
+volumetric lighting is only enabled in a scene view in edit mode. If playing, only enabled in a game view.
 
-This feature is available on URP Forward+ from 2022.3.0f1 (2022 LTS) version.
+This package is available on URP Forward+ from 2022.3.0f1 (2022 LTS) version.
 
 
 ## How to Use
@@ -18,7 +20,7 @@ This feature is available on URP Forward+ from 2022.3.0f1 (2022 LTS) version.
 
 
 ## Smoke Volume
-While this feature assumes a global volume, you can put a local smoke volume to make a ground smoke effect for a specific area. Due to performance, it supports 4 smoke volumes at maximum.
+While this package assumes a global volume, you can put a local smoke volume to make a ground smoke effect for a specific area. Due to performance, it supports 4 smoke volumes at maximum.
 
 To add a smoke volume to your scene, create a new gameObject and add 'Smoke Volume' component to the gameObject. You might need to create your own noise texture to use, but I added a default noise texture which can be found at 'Runtime/Textures/' directory.
 
@@ -31,5 +33,7 @@ To add a smoke volume to your scene, create a new gameObject and add 'Smoke Volu
    
    (In other words, only MainLight is working for Forward)
    
-3. DiffuseGI not contributes to lighting
+3. DiffuseGI does not contribute to lighting
 4. Noise texture is not supported 
+5. The number of Local Smoke Volumes is 4 at maximum.
+6. Volumetric lighting is only enabled in a scene view in edit mode. If playing, only enabled in a game view.

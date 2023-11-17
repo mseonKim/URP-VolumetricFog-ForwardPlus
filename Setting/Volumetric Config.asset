@@ -38,13 +38,13 @@ MonoBehaviour:
   enablePointAndSpotLight: 1
   enableAdditionalShadow: 1
   albedo: {r: 1, g: 1, b: 1, a: 1}
-  intensity: 1
+  directionalScatteringIntensity: 1
   localScatteringIntensity: 100
   anisotropy: 0
   depthExtent: 100
   screenResolutionPercentage: 12.5
-  volumeSliceCount: 256
+  volumeSliceCount: 128
   denoiseMode: 3
-  sampleOffsetWeight: 0.959
+  sampleOffsetWeight: 1
   autoSliceDistribution: 1
   sliceDistributionUniformity: 1

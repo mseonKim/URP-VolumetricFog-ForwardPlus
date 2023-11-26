@@ -112,7 +112,7 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         float linearDepth = LinearEyeDepth(deviceDepth, _ZBufferParams);
         ray.geomDist = linearDepth * rcp(dot(ray.jitterDirWS, F));
 
-        float2 UV = posInput.positionNDC * _RTHandleScale.xy;
+        float2 UV = posInput.positionNDC * _VLightingRTHandleScale.xy; // Although _RTHandleScale is used in HDRP, there's no _RTHandleScale property in URP 14 so I declared _VLightingRTHandleScale to support both URP 14 and above. 
 
         // This should really be using a max sampler here. This is a bit overdilating given that it is already dilated.
         // Better to be safer though.

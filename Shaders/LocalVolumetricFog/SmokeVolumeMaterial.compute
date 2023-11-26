@@ -38,11 +38,30 @@ SAMPLER(s_linear_repeat_sampler);
 // Implementation
 //--------------------------------------------------------------------------------------------------
 
+// Make custom function to support both URP 14 and 16
+float ComputeVolumeFadeFactor_Custom(float3 coordNDC, float dist,
+                        float3 rcpPosFaceFade, float3 rcpNegFaceFade, bool invertFade,
+                        float rcpDistFadeLen, float endTimesRcpDistFadeLen, bool exponentialFalloff)
+{
+    float3 posF = Remap10(coordNDC, rcpPosFaceFade, rcpPosFaceFade);
+    float3 negF = Remap01(coordNDC, rcpNegFaceFade, 0);
+    float  dstF = Remap10(dist, rcpDistFadeLen, endTimesRcpDistFadeLen);
+    float  fade = posF.x * posF.y * posF.z * negF.x * negF.y * negF.z;
+
+    // We only apply exponential falloff on the Blend Distance and not Distance Fade
+    if (exponentialFalloff)
+        fade = PositivePow(fade, 2.2);
+
+    fade = dstF * (invertFade ? (1 - fade) : fade);
+
+    return fade;
+}
+
 float ComputeFadeFactor(float3 coordNDC, float distance)
 {
     bool exponential = uint(_VolumetricMaterialFalloffMode) == LOCALVOLUMETRICFOGFALLOFFMODE_EXPONENTIAL;
 
-    return ComputeVolumeFadeFactor(
+    return ComputeVolumeFadeFactor_Custom(
         coordNDC, distance,
         _VolumetricMaterialRcpPosFaceFade.xyz,
         _VolumetricMaterialRcpNegFaceFade.xyz,

@@ -46,7 +46,7 @@ CBUFFER_START(ShaderVariablesVolumetricLighting)
     float4      _VBufferDistanceEncodingParams;
     float4      _VBufferDistanceDecodingParams;
     float4      _VBufferSampleOffset;
-    float4      _RTHandleScale;
+    float4      _VLightingRTHandleScale;
     float4x4    _VBufferCoordToViewDirWS;
 CBUFFER_END
 

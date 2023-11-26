@@ -35,7 +35,7 @@ namespace UniversalForwardPlusVolumetric
         public Vector4      _VBufferDistanceEncodingParams;
         public Vector4      _VBufferDistanceDecodingParams;
         public Vector4      _VBufferSampleOffset;
-        public Vector4      _RTHandleScale;
+        public Vector4      _VLightingRTHandleScale;
         public Matrix4x4    _VBufferCoordToViewDirWS;
     }
 

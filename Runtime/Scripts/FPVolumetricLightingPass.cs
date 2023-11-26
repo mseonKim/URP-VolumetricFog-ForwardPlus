@@ -178,9 +178,9 @@ namespace UniversalForwardPlusVolumetric
             m_VolumetricLightingCB._VBufferDistanceDecodingParams = m_VBufferParameters.depthDecodingParams;
             m_VolumetricLightingCB._VBufferSampleOffset = xySeqOffset;
         #if UNITY_EDITOR    // _RTHandleScale is different for scend & game view.
-            m_VolumetricLightingCB._RTHandleScale = Vector4.one;
+            m_VolumetricLightingCB._VLightingRTHandleScale = Vector4.one;
         #else
-            m_VolumetricLightingCB._RTHandleScale = RTHandles.rtHandleProperties.rtHandleScale;
+            m_VolumetricLightingCB._VLightingRTHandleScale = RTHandles.rtHandleProperties.rtHandleScale;
         #endif
             m_VolumetricLightingCB._VBufferCoordToViewDirWS = m_VBufferCoordToViewDirWS[0];
 

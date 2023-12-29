@@ -72,7 +72,7 @@ float ComputeFadeFactor(float3 coordNDC, float distance)
     );
 }
 
-float4 InverseLerp(float4 A, float4 B, float4 T)
+float InverseLerp(float A, float B, float T)
 {
     return (T - A) / (B - A);
 }
@@ -159,9 +159,7 @@ void ComputeVolumetricMaterial(uint2 pixelPos, JitteredRay ray)
 }
 
 [numthreads(GROUP_SIZE_1D, GROUP_SIZE_1D, 1)]
-void SmokeVolumeMaterial(uint3 dispatchThreadId : SV_DispatchThreadID,
-                         uint2 groupId          : SV_GroupID,
-                         uint2 groupThreadId    : SV_GroupThreadID)
+void SmokeVolumeMaterial(uint3 dispatchThreadId : SV_DispatchThreadID)
 {
     // UNITY_XR_ASSIGN_VIEW_INDEX(dispatchThreadId.z);
 

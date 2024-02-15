@@ -23,6 +23,7 @@ namespace UniversalForwardPlusVolumetric
         {
             m_VBufferParameters = vBufferParameters;
             m_PassData.generateMaxZCS = config.generateMaxZCS;
+            m_PassData.useOIT = config.useOIT;
             m_ProfilingSampler = new ProfilingSampler("Generate MaxZ");
         }
 
@@ -95,6 +96,9 @@ namespace UniversalForwardPlusVolumetric
                 int dispatchX = maskW;
                 int dispatchY = maskH;
 
+                var oitKeyword = new LocalKeyword(cs, "_USE_OIT");
+                cmd.SetKeyword(cs, oitKeyword, data.useOIT);
+
                 cmd.SetComputeTextureParam(cs, kernel, IDs._OutputTexture, m_MaxZ8xBufferHandle);
                 cmd.DispatchCompute(cs, kernel, dispatchX, dispatchY, data.viewCount);
 
@@ -156,6 +160,7 @@ namespace UniversalForwardPlusVolumetric
 
             public float dilationWidth;
             public int viewCount;
+            public bool useOIT;
         }
     }
 }

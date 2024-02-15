@@ -282,6 +282,9 @@ namespace UniversalForwardPlusVolumetric
                     && m_VolumetricLightingFilteringCS != null
                     && Shader.GetGlobalTexture("_CameraDepthTexture") != null)   // To prevent error log
                 {
+                    var oitKeyword = new LocalKeyword(m_VolumetricLightingCS, "_USE_OIT");
+                    cmd.SetKeyword(m_VolumetricLightingCS, oitKeyword, m_Config.useOIT);
+
                     cmd.SetComputeTextureParam(m_VolumetricLightingCS, s_VBufferLightingCSKernal, IDs._VBufferDensity, m_VBufferDensityHandle);
                     cmd.SetComputeTextureParam(m_VolumetricLightingCS, s_VBufferLightingCSKernal, IDs._VBufferLighting, m_VBufferLightingHandle);
                     if (m_Config.enableReprojection)
@@ -311,6 +314,8 @@ namespace UniversalForwardPlusVolumetric
 
                 if (m_ResolveMat != null)
                 {
+                    var oitKeyword = new LocalKeyword(m_ResolveMat.shader, "_USE_OIT");
+                    m_ResolveMat.SetKeyword(oitKeyword, m_Config.useOIT);
                     CoreUtils.DrawFullScreen(cmd, m_ResolveMat);
                 }
 

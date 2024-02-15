@@ -88,5 +88,6 @@ namespace UniversalForwardPlusVolumetric
         [Tooltip("Controls the distribution of slices along the Camera's focal axis. 0 is exponential distribution and 1 is linear distribution.")]
         [Range(0, 1f)]
         public float sliceDistributionUniformity = 0.75f;
+        public bool useOIT;
     }
 }

@@ -27,6 +27,7 @@ Shader "Fog/OpaqueAtmosphericScattering"
             ZTest Less  // Required for XR occlusion mesh optimization
 
             HLSLPROGRAM
+                #pragma shader_feature_local _USE_OIT
                 #pragma multi_compile_fragment _ _FORWARD_PLUS
                 #pragma vertex Vert
                 #pragma fragment FragVBuffer

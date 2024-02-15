@@ -1,4 +1,4 @@
-// #pragma enable_d3d11_debug_symbols
+#pragma enable_d3d11_debug_symbols
 #pragma kernel VolumetricLighting
 #pragma multi_compile _ _FORWARD_PLUS
 #pragma multi_compile _ _LIGHT_COOKIES
@@ -9,6 +9,7 @@
 #pragma multi_compile _ SUPPORT_ADDITIONAL_SHADOWS
 #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
 #pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS
+#pragma multi_compile_local _ _USE_OIT
 
 #include "./VolumetricLightingCommon.hlsl"
 #include "./VBuffer.hlsl"
@@ -43,7 +44,7 @@ float ComputeHistoryWeight()
     // X = (1 / n) * ValueAtFrame[n] + ((n - 1) / n) * (1 / (n - 1)) * Sum{i from 1 to n - 1}{ValueAtFrame[i]}.
     // X = (1 / n) * ValueAtFrame[n] + (1 / n) * Sum{i from 1 to n - 1}{ValueAtFrame[i]}.
     // X = Sum{i from 1 to n}{ValueAtFrame[i] / n}.
-    float numFrames     = 7;
+    float numFrames     = 4;
     float frameWeight   = 1 / numFrames;
     float historyWeight = 1 - frameWeight;
 

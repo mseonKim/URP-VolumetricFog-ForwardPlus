@@ -4,7 +4,15 @@
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 real LerpWhiteTo(real b, real t) { return (1.0 - t) + b * t; }  // To prevent compile error
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/RealtimeLights.hlsl"
+#if _USE_OIT
+TEXTURE2D(_CombinedOITDepthTexture);
+float LoadSceneDepth(uint2 uv)
+{
+    return LOAD_TEXTURE2D_X(_CombinedOITDepthTexture, uv).r;
+}
+#else
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
+#endif
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/VolumeRendering.hlsl"
 
 CBUFFER_START(ShaderVariablesFog)

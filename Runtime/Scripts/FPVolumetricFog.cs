@@ -30,10 +30,6 @@ namespace UniversalForwardPlusVolumetric
             if (!config.volumetricLighting)
                 return;
 
-            // Only activate for main camera
-            if (renderingData.cameraData.camera != Camera.main)
-                return;
-
 #if UNITY_EDITOR
             // Only activate volumetric lighting in scene view if edit mode.
             // If playing, activate feature only for game view.

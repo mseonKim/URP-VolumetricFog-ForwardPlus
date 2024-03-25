@@ -80,7 +80,7 @@ namespace UniversalForwardPlusVolumetric
         [Tooltip("The color this fog scatters light to.")]
         public Color scatteringAlbedo = Color.white;
         [Min(0.05f), Tooltip("Density at the base of the fog. Determines how far you can see through the fog in meters.")]
-        public float fogDistance = 150; // meanFreePath
+        public float fogDistance = 10f; // meanFreePath
         public Texture mask;
         [HideInInspector] public LocalVolumeShaderSetting volumeShaderSetting; // unused currently
 
@@ -91,9 +91,9 @@ namespace UniversalForwardPlusVolumetric
         /// <summary>Inverts the fade gradient.</summary>
         public bool invertFade;
         /// <summary>Distance at which density fading starts.</summary>
-        public float distanceFadeStart = 10000;
+        public float distanceFadeStart = 50f;
         /// <summary>Distance at which density fading ends.</summary>
-        public float distanceFadeEnd = 10000;
+        public float distanceFadeEnd = 200f;
         public LocalVolumetricFogFalloffMode falloffMode;
 
 

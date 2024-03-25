@@ -75,7 +75,7 @@ namespace UniversalForwardPlusVolumetric
         public float screenResolutionPercentage = 12.5f;
         [Tooltip("Controls the number of slices to use the volumetric buffer (3D texture) along the camera's focal axis.")]
         [Range(1, 256)]
-        public int volumeSliceCount = 64;
+        public int volumeSliceCount = 128;
 
         public DenoiseMode denoiseMode = DenoiseMode.Gaussian;
         public bool filterVolume => (denoiseMode == DenoiseMode.Gaussian || denoiseMode == DenoiseMode.Both);
@@ -84,7 +84,7 @@ namespace UniversalForwardPlusVolumetric
         [Range(0.001f, 1f)]
         public float sampleOffsetWeight = 1f;
         [Tooltip("Controls the distribution of slices automatically based on camera distance from (0, 0, 0). If camera gets close to (0, 0, 0), the value gets 0(= exponential). It gets 1 if camera gets far from (0, 0, 0).")]
-        public bool autoSliceDistribution;
+        public bool autoSliceDistribution = true;
         [Tooltip("Controls the distribution of slices along the Camera's focal axis. 0 is exponential distribution and 1 is linear distribution.")]
         [Range(0, 1f)]
         public float sliceDistributionUniformity = 0.75f;

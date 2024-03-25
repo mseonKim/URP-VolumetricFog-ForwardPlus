@@ -11,6 +11,7 @@ MonoImporter:
   - volumetricLightingFilteringCS: {fileID: 7200000, guid: e7c6734610ba8774789df5bebb773484,
       type: 3}
   - generateMaxZCS: {fileID: 7200000, guid: ef07e1cecfcf17849b9dabc5c283c5d1, type: 3}
+  - defaultLocalVolumeShader: {fileID: 7200000, guid: 0661a81e303cf794890df5e603c4f35b, type: 3}
   - resolveMat: {fileID: 2100000, guid: 2acfffc3c62e9b24b813c8247c7ab5b7, type: 2}
   executionOrder: 0
   icon: {instanceID: 0}

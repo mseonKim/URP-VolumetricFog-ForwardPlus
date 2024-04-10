@@ -210,7 +210,7 @@ VoxelLighting EvaluateVoxelLightingDirectional(float extinction, float anisotrop
         float  cosTheta = dot(lightPositionWS.xyz, ray.centerDirWS);
         float  phase = CornetteShanksPhasePartVarying(anisotropy, cosTheta);
 
-    #if SUPPORT_ADDITIONAL_SHADOWS
+        // Shadow
         // Directional lights store direction in lightPosition.xyz and have .w set to 0.0.
         // This way the following code will work for both directional and punctual lights.
         float3 lightVector = lightPositionWS.xyz - positionWS * lightPositionWS.w;
@@ -219,9 +219,6 @@ VoxelLighting EvaluateVoxelLightingDirectional(float extinction, float anisotrop
         half3 lightDirection = half3(lightVector * rsqrt(distanceSqr));
         half shadowAtten = AdditionalLightRealtimeShadow(lightIndex, positionWS, lightDirection);
         color *= lerp(_VBufferScatteringIntensity, shadowAtten, shadowAtten < 1);
-    #else
-        color *= _VBufferScatteringIntensity;
-    #endif
 
         // Cookie
     #if defined(_LIGHT_COOKIES)
@@ -282,12 +279,9 @@ VoxelLighting EvaluateVoxelLightingLocal(float2 pixelCoord, float extinction, fl
         float attenuation = DistanceAttenuation(distanceSqr, distanceAndSpotAttenuation.xy) * AngleAttenuation(spotDirection.xyz, lightDirection, distanceAndSpotAttenuation.zw);
         color *= attenuation;
 
-    #if SUPPORT_ADDITIONAL_SHADOWS
+        // Shadow
         half shadowAtten = AdditionalLightRealtimeShadow(lightIndex, positionWS, lightDirection);
         color *= lerp(_VBufferLocalScatteringIntensity, shadowAtten, shadowAtten < 1);
-    #else
-        color *= _VBufferLocalScatteringIntensity;
-    #endif
 
         // Cookie
     #if defined(_LIGHT_COOKIES)

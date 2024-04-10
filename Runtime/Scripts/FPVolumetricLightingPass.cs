@@ -193,7 +193,6 @@ namespace UniversalForwardPlusVolumetric
             CoreUtils.SetKeyword(m_VolumetricLightingCS, "ENABLE_ANISOTROPY", m_Config.anisotropy != 0f);
             CoreUtils.SetKeyword(m_VolumetricLightingCS, "SUPPORT_DIRECTIONAL_LIGHTS", m_Config.enableDirectionalLight);
             CoreUtils.SetKeyword(m_VolumetricLightingCS, "SUPPORT_LOCAL_LIGHTS", m_Config.enablePointAndSpotLight);
-            CoreUtils.SetKeyword(m_VolumetricLightingCS, "SUPPORT_ADDITIONAL_SHADOWS", m_Config.enableAdditionalShadow);
         }
 
         private void UpdateVolumeShaderVariables(ref ShaderVariablesLocalVolume cb, LocalVolumetricFog volume, Camera camera)

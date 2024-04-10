@@ -32,14 +32,13 @@ MonoBehaviour:
   mipFogFar: 1000
   baseHeight: 0
   maximumHeight: 50
-  fogAttenuationDistance: 120
+  fogAttenuationDistance: 100
   volumetricLighting: 1
   enableDirectionalLight: 1
   enablePointAndSpotLight: 1
-  enableAdditionalShadow: 1
   albedo: {r: 1, g: 1, b: 1, a: 1}
   directionalScatteringIntensity: 1
-  localScatteringIntensity: 100
+  localScatteringIntensity: 50
   anisotropy: 0
   depthExtent: 100
   screenResolutionPercentage: 12.5

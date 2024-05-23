@@ -25,6 +25,7 @@ While this package assumes a global volume, you can put a local smoke volume to 
 To add a smoke volume to your scene, create a new gameObject and add 'Smoke Volume' component to the gameObject. You might need to create your own noise texture to use, but I added a default noise texture which can be found at 'Runtime/Textures/' directory.
 
 ![Smoke Volume](./Documentation~/Images/Smoke.png)
+![Smoke Volume2](./Documentation~/Images/Smoke2.png)
 ![Smoke Volume Component](./Documentation~/Images/SmokeVolumeComponent.png)
 
 

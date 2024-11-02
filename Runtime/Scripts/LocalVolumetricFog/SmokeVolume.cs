@@ -41,6 +41,7 @@ namespace UniversalForwardPlusVolumetric
             cmd.SetComputeVectorParam(cs, IDs._SmokeVolumeParams1, new Vector4(tiling, detailNoiseTiling, flatten, 0));
         }
 
+#if ENABLE_URP_VOLUEMTRIC_FOG_RENDERGRAPH
         public override void SetComputeShaderProperties(ComputeCommandBuffer cmd, ComputeShader cs, int kernel)
         {
             cs.SetTexture(kernel, IDs._MaskTexture, mask);
@@ -48,6 +49,6 @@ namespace UniversalForwardPlusVolumetric
             cmd.SetComputeVectorParam(cs, IDs._SmokeVolumeParams0, new Vector4(windSpeed, counterFlowSpeed, normalizedWindDirection.x, normalizedWindDirection.y));
             cmd.SetComputeVectorParam(cs, IDs._SmokeVolumeParams1, new Vector4(tiling, detailNoiseTiling, flatten, 0));
         }
-
+#endif
     }
 }

@@ -189,10 +189,12 @@ namespace UniversalForwardPlusVolumetric
             // Set mask texture and material properties here
         }
 
+#if ENABLE_URP_VOLUEMTRIC_FOG_RENDERGRAPH
         public virtual void SetComputeShaderProperties(ComputeCommandBuffer cmd, ComputeShader cs, int kernel)
         {
             // Set mask texture and material properties here
         }
+#endif
 
         internal OrientedBBox GetOBB()
         {

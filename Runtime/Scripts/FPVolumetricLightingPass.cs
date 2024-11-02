@@ -466,12 +466,15 @@ namespace UniversalForwardPlusVolumetric
                     }
                     s_TAAData.historyBufferAllocated = config.enableReprojection;
                 }
-                
-                for (int i = 0; i < 2; i++)
+
+                if (m_VolumetricHistoryBuffers != null)
                 {
-                    var texture = renderGraph.ImportTexture(m_VolumetricHistoryBuffers[i]);
-                    passData.volumetricHistoryBuffers[i] = texture;
-                    builder.UseTexture(texture);
+                    for (int i = 0; i < 2; i++)
+                    {
+                        var texture = renderGraph.ImportTexture(m_VolumetricHistoryBuffers[i]);
+                        passData.volumetricHistoryBuffers[i] = texture;
+                        builder.UseTexture(texture);
+                    }
                 }
 
                 // Set shader variables

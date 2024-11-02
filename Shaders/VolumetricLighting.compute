@@ -180,7 +180,7 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         ZERO_INITIALIZE(VoxelLighting, aggregateLighting);
 
         // Prevent division by 0.
-        extinction = max(extinction, FLT_MIN);
+        extinction = max(extinction, HALF_MIN);
 
         float sampleOpticalDepth = extinction * dt;
         float sampleTransmittance = exp(-sampleOpticalDepth);

@@ -77,7 +77,7 @@ void EvaluateAtmosphericScattering(PositionInputs posInput, float3 V, out float3
             float  trFallback = TransmittanceFromOpticalDepth(odFallback);
             float  trCamera = 1 - volFog.a;
 
-            volFog.rgb += trCamera * GetFogColor(V, fogFragDist) * GetCurrentExposureMultiplier() * volAlbedo * (1 - trFallback);
+            volFog.rgb += trCamera * GetFogColor(V, fogFragDist) * CurrentExposureMultiplier() * volAlbedo * (1 - trFallback);
             volFog.a = 1 - (trCamera * trFallback);
         }
 

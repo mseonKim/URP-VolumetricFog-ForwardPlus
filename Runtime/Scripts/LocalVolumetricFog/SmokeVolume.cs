@@ -41,9 +41,12 @@ namespace UniversalForwardPlusVolumetric
             cmd.SetComputeVectorParam(cs, IDs._SmokeVolumeParams1, new Vector4(tiling, detailNoiseTiling, flatten, 0));
         }
 
-        public override bool UpdateRenderTextureIfNeeded(ScriptableRenderContext context, CommandBuffer cmd,  ref RenderingData renderingData)
+        public override void SetComputeShaderProperties(ComputeCommandBuffer cmd, ComputeShader cs, int kernel)
         {
-            return false;
+            cs.SetTexture(kernel, IDs._MaskTexture, mask);
+            var normalizedWindDirection = windDirection.normalized;
+            cmd.SetComputeVectorParam(cs, IDs._SmokeVolumeParams0, new Vector4(windSpeed, counterFlowSpeed, normalizedWindDirection.x, normalizedWindDirection.y));
+            cmd.SetComputeVectorParam(cs, IDs._SmokeVolumeParams1, new Vector4(tiling, detailNoiseTiling, flatten, 0));
         }
 
     }

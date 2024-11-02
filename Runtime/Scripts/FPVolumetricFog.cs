@@ -18,6 +18,12 @@ namespace UniversalForwardPlusVolumetric
             m_GenerateMaxZPass = new GenerateMaxZPass();
             m_VolumetricLightingPass = new FPVolumetricLightingPass();
         }
+        
+        // Currently only used for RenderGraph API
+        public override void SetupRenderPasses(ScriptableRenderer renderer, in RenderingData renderingData)
+        {
+            m_VolumetricLightingPass.SetTargetHandleYFlipped(renderer, renderingData.cameraData);
+        }
 
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
         {

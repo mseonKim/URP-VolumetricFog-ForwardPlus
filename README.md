@@ -10,6 +10,8 @@ volumetric lighting is only enabled in a scene view in edit mode. If playing, on
 
 This package is available on URP Forward+ from 2022.3.0f1 (2022 LTS) version.
 
+To enable RenderGraph in Unity6, add `ENABLE_URP_VOLUEMTRIC_FOG_RENDERGRAPH` define to `Scripting Define Symbols` in the `Player>Script Compilation` setting.
+
 
 ## How to Use
 1. Add 'FP Volumetric Fog' renderer feature to Renderer data (Make sure to use Forward+)

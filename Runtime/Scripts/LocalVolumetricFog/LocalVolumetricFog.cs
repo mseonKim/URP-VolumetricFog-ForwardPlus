@@ -189,10 +189,9 @@ namespace UniversalForwardPlusVolumetric
             // Set mask texture and material properties here
         }
 
-        public virtual bool UpdateRenderTextureIfNeeded(ScriptableRenderContext context, CommandBuffer cmd,  ref RenderingData renderingData)
+        public virtual void SetComputeShaderProperties(ComputeCommandBuffer cmd, ComputeShader cs, int kernel)
         {
-            // Update render texture if needed
-            return false;
+            // Set mask texture and material properties here
         }
 
         internal OrientedBBox GetOBB()

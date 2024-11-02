@@ -98,7 +98,7 @@ float GetInversePreviousExposureMultiplier()
 {
     return 1.0f;
 }
-float GetCurrentExposureMultiplier()
+float CurrentExposureMultiplier() // TODO: Replace with GetCurrentExposureMultiplier for URP17 once implemented
 {
     return 1.0f;
 }

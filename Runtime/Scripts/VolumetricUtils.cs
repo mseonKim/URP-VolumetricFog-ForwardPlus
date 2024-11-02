@@ -2,6 +2,9 @@ using System;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+#if ENABLE_URP_VOLUEMTRIC_FOG_RENDERGRAPH
+using UnityEngine.Rendering.RenderGraphModule;
+#endif
 
 namespace UniversalForwardPlusVolumetric
 {
@@ -414,5 +417,71 @@ namespace UniversalForwardPlusVolumetric
             transform = ComputePixelCoordToWorldSpaceViewDirectionMatrix(cameraData, resolution);
         }
 
+        
+#if ENABLE_URP_VOLUEMTRIC_FOG_RENDERGRAPH
+        internal static bool IsCameraProjectionMatrixFlipped(bool handleYFlipped, UniversalCameraData cameraData)
+        {
+            if (!SystemInfo.graphicsUVStartsAtTop)
+                return false;
+
+            return handleYFlipped || cameraData.targetTexture != null;
+        }
+        
+        internal static void SetCameraMatrices(UniversalCameraData cameraData, bool cameraHandleYFlipped, out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix, out Matrix4x4 viewProjMatrix, out Matrix4x4 invViewProjMatrix)
+        {
+            var camera = cameraData.camera;
+            viewMatrix = camera.worldToCameraMatrix;
+            projMatrix = GL.GetGPUProjectionMatrix(cameraData.GetProjectionMatrix(), cameraHandleYFlipped); // TODO: Test TAA to verify JitterMatrix
+            viewProjMatrix = projMatrix * viewMatrix;
+            invViewProjMatrix = viewProjMatrix.inverse;
+        }
+
+        internal static Matrix4x4 ComputePixelCoordToWorldSpaceViewDirectionMatrix(UniversalCameraData cameraData, bool cameraHandleYFlipped, Vector4 resolution)
+        {
+            var camera = cameraData.camera;
+            SetCameraMatrices(cameraData, cameraHandleYFlipped, out var viewMatrix, out var cameraProj, out var viewProjMatrix, out var invViewProjMatrix);
+
+            // In XR mode use a more generic matrix to account for asymmetry in the projection
+            var useGenericMatrix = cameraData.xr.enabled;
+
+            // Asymmetry is also possible from a user-provided projection, so we must check for it too.
+            // Note however, that in case of physical camera, the lens shift term is the only source of
+            // asymmetry, and this is accounted for in the optimized path below. Additionally, Unity C++ will
+            // automatically disable physical camera when the projection is overridden by user.
+            useGenericMatrix |= IsProjectionMatrixAsymmetric(cameraProj) && !camera.usePhysicalProperties;
+
+            if (useGenericMatrix)
+            {
+                var viewSpaceRasterTransform = new Matrix4x4(
+                    new Vector4(2.0f * resolution.z, 0.0f, 0.0f, -1.0f),
+                    new Vector4(0.0f, -2.0f * resolution.w, 0.0f, 1.0f),
+                    new Vector4(0.0f, 0.0f, 1.0f, 0.0f),
+                    new Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+
+                var transformT = invViewProjMatrix.transpose * Matrix4x4.Scale(new Vector3(-1.0f, -1.0f, -1.0f));
+                return viewSpaceRasterTransform * transformT;
+            }
+
+            float verticalFoV = camera.GetGateFittedFieldOfView() * Mathf.Deg2Rad;
+            if (!camera.usePhysicalProperties)
+            {
+                verticalFoV = Mathf.Atan(-1.0f / cameraProj[1, 1]) * 2;
+            }
+            Vector2 lensShift = camera.GetGateFittedLensShift();
+
+            float aspect = ProjectionMatrixAspect(cameraProj);
+            return ComputePixelCoordToWorldSpaceViewDirectionMatrix(verticalFoV, lensShift, resolution, viewMatrix, false, aspect, camera.orthographic);
+        }
+
+        public static void GetPixelCoordToViewDirWS(UniversalCameraData cameraData, bool cameraHandleYFlipped, Vector4 resolution, ref Matrix4x4[] transforms)
+        {
+            transforms[0] = ComputePixelCoordToWorldSpaceViewDirectionMatrix(cameraData, cameraHandleYFlipped, resolution);
+        }
+
+        public static void GetPixelCoordToViewDirWS(UniversalCameraData cameraData, bool cameraHandleYFlipped, Vector4 resolution, ref Matrix4x4 transform)
+        {
+            transform = ComputePixelCoordToWorldSpaceViewDirectionMatrix(cameraData, cameraHandleYFlipped, resolution);
+        }
+#endif
     }
 }

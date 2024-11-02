@@ -419,27 +419,19 @@ namespace UniversalForwardPlusVolumetric
 
         
 #if ENABLE_URP_VOLUEMTRIC_FOG_RENDERGRAPH
-        internal static bool IsCameraProjectionMatrixFlipped(bool handleYFlipped, UniversalCameraData cameraData)
-        {
-            if (!SystemInfo.graphicsUVStartsAtTop)
-                return false;
-
-            return handleYFlipped || cameraData.targetTexture != null;
-        }
-        
-        internal static void SetCameraMatrices(UniversalCameraData cameraData, bool cameraHandleYFlipped, out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix, out Matrix4x4 viewProjMatrix, out Matrix4x4 invViewProjMatrix)
+        internal static void SetCameraMatrices(UniversalCameraData cameraData, out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix, out Matrix4x4 viewProjMatrix, out Matrix4x4 invViewProjMatrix)
         {
             var camera = cameraData.camera;
             viewMatrix = camera.worldToCameraMatrix;
-            projMatrix = GL.GetGPUProjectionMatrix(cameraData.GetProjectionMatrix(), cameraHandleYFlipped); // TODO: Test TAA to verify JitterMatrix
+            projMatrix = GL.GetGPUProjectionMatrix(cameraData.GetProjectionMatrix(), true);
             viewProjMatrix = projMatrix * viewMatrix;
             invViewProjMatrix = viewProjMatrix.inverse;
         }
 
-        internal static Matrix4x4 ComputePixelCoordToWorldSpaceViewDirectionMatrix(UniversalCameraData cameraData, bool cameraHandleYFlipped, Vector4 resolution)
+        internal static Matrix4x4 ComputePixelCoordToWorldSpaceViewDirectionMatrix(UniversalCameraData cameraData, Vector4 resolution)
         {
             var camera = cameraData.camera;
-            SetCameraMatrices(cameraData, cameraHandleYFlipped, out var viewMatrix, out var cameraProj, out var viewProjMatrix, out var invViewProjMatrix);
+            SetCameraMatrices(cameraData, out var viewMatrix, out var cameraProj, out var viewProjMatrix, out var invViewProjMatrix);
 
             // In XR mode use a more generic matrix to account for asymmetry in the projection
             var useGenericMatrix = cameraData.xr.enabled;
@@ -473,14 +465,14 @@ namespace UniversalForwardPlusVolumetric
             return ComputePixelCoordToWorldSpaceViewDirectionMatrix(verticalFoV, lensShift, resolution, viewMatrix, false, aspect, camera.orthographic);
         }
 
-        public static void GetPixelCoordToViewDirWS(UniversalCameraData cameraData, bool cameraHandleYFlipped, Vector4 resolution, ref Matrix4x4[] transforms)
+        public static void GetPixelCoordToViewDirWS(UniversalCameraData cameraData, Vector4 resolution, ref Matrix4x4[] transforms)
         {
-            transforms[0] = ComputePixelCoordToWorldSpaceViewDirectionMatrix(cameraData, cameraHandleYFlipped, resolution);
+            transforms[0] = ComputePixelCoordToWorldSpaceViewDirectionMatrix(cameraData, resolution);
         }
 
-        public static void GetPixelCoordToViewDirWS(UniversalCameraData cameraData, bool cameraHandleYFlipped, Vector4 resolution, ref Matrix4x4 transform)
+        public static void GetPixelCoordToViewDirWS(UniversalCameraData cameraData, Vector4 resolution, ref Matrix4x4 transform)
         {
-            transform = ComputePixelCoordToWorldSpaceViewDirectionMatrix(cameraData, cameraHandleYFlipped, resolution);
+            transform = ComputePixelCoordToWorldSpaceViewDirectionMatrix(cameraData, resolution);
         }
 #endif
     }

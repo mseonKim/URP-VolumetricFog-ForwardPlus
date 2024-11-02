@@ -48,7 +48,6 @@ namespace UniversalForwardPlusVolumetric
         private Matrix4x4 m_PixelCoordToViewDirWS;
 
         private static TAAData s_TAAData;
-        private bool m_IsHandleYFlipped;                // For RenderGraph API
         private ProfilingSampler m_ProfilingSampler;
 
         // CBuffers
@@ -62,14 +61,6 @@ namespace UniversalForwardPlusVolumetric
             renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
             m_VBufferCoordToViewDirWS = new Matrix4x4[1]; // Currently xr not supported
             s_TAAData = new TAAData();
-        }
-        
-        // Currently only used for RenderGraph API
-        public void SetTargetHandleYFlipped(ScriptableRenderer renderer, CameraData cameraData)
-        {
-#pragma warning disable CS0618
-            m_IsHandleYFlipped = cameraData.IsHandleYFlipped(renderer.cameraColorTargetHandle);
-#pragma warning restore CS0618
         }
 
         public void Setup(VolumetricConfig config, in VBufferParameters vBufferParameters)
@@ -427,7 +418,6 @@ namespace UniversalForwardPlusVolumetric
                 passData.cameraData = cameraData;
                 
                 builder.AllowGlobalStateModification(true);
-                passData.cameraHandleYFlipped = VolumetricUtils.IsCameraProjectionMatrixFlipped(m_IsHandleYFlipped, cameraData);
                 
                 // Setup
                 var config = passData.config;
@@ -601,7 +591,7 @@ namespace UniversalForwardPlusVolumetric
 
             // Set prev cam data
             s_TAAData.prevCamPosRWS = camera.transform.position;
-            VolumetricUtils.SetCameraMatrices(data.cameraData, data.cameraHandleYFlipped, out var v, out var p, out s_TAAData.prevMatrixVP, out var invvp);
+            VolumetricUtils.SetCameraMatrices(data.cameraData, out var v, out var p, out s_TAAData.prevMatrixVP, out var invvp);
         }
 
         private void SetFogShaderVariables(RenderGraphPassData passData)
@@ -642,9 +632,9 @@ namespace UniversalForwardPlusVolumetric
             var xySeqOffset = new Vector4();
             xySeqOffset.Set(s_TAAData.xySeq[sampleIndex].x * config.sampleOffsetWeight, s_TAAData.xySeq[sampleIndex].y * config.sampleOffsetWeight, VolumetricUtils.zSeq[sampleIndex], s_TAAData.frameIndex);
 
-            VolumetricUtils.GetPixelCoordToViewDirWS(cameraData, passData.cameraHandleYFlipped, new Vector4(Screen.width, Screen.height, 1f / Screen.width, 1f / Screen.height), ref passData.pixelCoordToViewDirWS);
+            VolumetricUtils.GetPixelCoordToViewDirWS(cameraData, new Vector4(Screen.width, Screen.height, 1f / Screen.width, 1f / Screen.height), ref passData.pixelCoordToViewDirWS);
             var viewportSize = new Vector4(vBufferViewportSize.x, vBufferViewportSize.y, 1.0f / vBufferViewportSize.x, 1.0f / vBufferViewportSize.y);
-            VolumetricUtils.GetPixelCoordToViewDirWS(cameraData, passData.cameraHandleYFlipped, viewportSize, ref passData.vBufferCoordToViewDirWS);
+            VolumetricUtils.GetPixelCoordToViewDirWS(cameraData, viewportSize, ref passData.vBufferCoordToViewDirWS);
 
             passData.volumetricLightingCB._VolumetricFilteringEnabled = config.filterVolume ? 1u : 0u;
             passData.volumetricLightingCB._VBufferHistoryIsValid = (config.enableReprojection && s_TAAData.vBufferHistoryIsValid) ? 1u : 0u;
@@ -695,7 +685,6 @@ namespace UniversalForwardPlusVolumetric
             public Matrix4x4 pixelCoordToViewDirWS;
             
             public UniversalCameraData cameraData;
-            public bool cameraHandleYFlipped;
 
             public ShaderVariablesFog fogCB = new ShaderVariablesFog();
             public ShaderVariablesVolumetricLighting volumetricLightingCB = new ShaderVariablesVolumetricLighting();

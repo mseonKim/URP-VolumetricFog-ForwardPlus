@@ -10,13 +10,12 @@ volumetric lighting is only enabled in a scene view in edit mode. If playing, on
 
 This package is available on URP Forward+ from 2022.3.0f1 (2022 LTS) version.
 
-To enable RenderGraph in Unity6, add `ENABLE_URP_VOLUEMTRIC_FOG_RENDERGRAPH` define to `Scripting Define Symbols` in the `Player>Script Compilation` setting.
-
 
 ## How to Use
 1. Add 'FP Volumetric Fog' renderer feature to Renderer data (Make sure to use Forward+)
 2. Create 'Volumetric Config' via 'Create/UniversalVolumetric/VolumetricFogConfig'
 3. Link the config asset to the renderer feature
+4. To use RenderGraph in Unity 6, add `ENABLE_URP_VOLUEMTRIC_FOG_RENDERGRAPH` define to `Scripting Define Symbols` in the `Project Settings > Player > Other Settings > Script Compilation`.
 
 NOTE - If you use Unity 6 LTS and the rendering result is not as expected, change `Shader Precision Model` setting in `Project Settings > Player > Other Settings > Shader Settings`.
 
@@ -39,8 +38,8 @@ To add a smoke volume to your scene, create a new gameObject and add 'Smoke Volu
    
    (In other words, only MainLight is working for Forward)
    
-3. TAA not supported
-4. DiffuseGI does not contribute to lighting
-5. Noise texture is not supported 
-6. The number of LocalSmokeVolume is 4 at maximum.
-7. Volumetric lighting is only enabled in a scene view in edit mode. If playing, only enabled in a game view.
+3. DiffuseGI does not contribute to lighting
+4. Noise texture is not supported 
+5. The number of LocalSmokeVolume is 4 at maximum.
+6. Volumetric lighting is only enabled in a scene view in edit mode. If playing, only enabled in a game view.
+7. TAA in Unity 6 is not supported yet.

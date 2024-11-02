@@ -10,6 +10,10 @@ volumetric lighting is only enabled in a scene view in edit mode. If playing, on
 
 This package is available on URP Forward+ from 2022.3.0f1 (2022 LTS) version.
 
+||2022 LTS|2023|Unity 6|
+|:---:|:---:|:---:|:---:|
+|URP Compatibility|O|O|O|
+|RenderGraph Implementation|X|X|O|
 
 ## How to Use
 1. Add 'FP Volumetric Fog' renderer feature to Renderer data (Make sure to use Forward+)

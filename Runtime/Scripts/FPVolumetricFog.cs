@@ -24,31 +24,20 @@ namespace UniversalForwardPlusVolumetric
             if (config == null)
                 return;
 
-            if (renderingData.cameraData.cameraType == CameraType.Reflection)
+            var cameraType = renderingData.cameraData.cameraType;
+            if (cameraType == CameraType.Reflection)
                 return;
 
             if (!config.volumetricLighting)
                 return;
 
 #if UNITY_EDITOR
-            // Only activate volumetric lighting in scene view if edit mode.
-            // If playing, activate feature only for game view.
-            if (renderingData.cameraData.cameraType == CameraType.SceneView)
-            {
-                if (Application.isPlaying)
-                    return;
-            }
-            else if (renderingData.cameraData.cameraType == CameraType.Game)
-            {
-                if (!Application.isPlaying)
-                    return;
-            }
-            else // Skip if other camera types
+            if (cameraType != CameraType.SceneView && cameraType != CameraType.Game)
             {
                 return;
             }
 #endif
-            m_VBufferParameters = VolumetricUtils.ComputeVolumetricBufferParameters(config, renderingData.cameraData.camera);
+            m_VBufferParameters = VolumetricUtils.ComputeVolumetricBufferParameters(config, renderingData.cameraData.camera, renderingData.cameraData.renderScale);
 
             m_GenerateMaxZPass.Setup(config, m_VBufferParameters);
             renderer.EnqueuePass(m_GenerateMaxZPass);
@@ -65,4 +54,3 @@ namespace UniversalForwardPlusVolumetric
     }
 
 }
-

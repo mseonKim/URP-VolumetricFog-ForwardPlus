@@ -5,8 +5,6 @@
 This repository is copied from Unity HDRP Volumetric Fog.
 
 Note that this feature is working as a global fog volume while HDRP requires local volumes.
-Since it shows unexpected behaviors when the screen size of Scene View and the screen size of Game View are different,
-volumetric lighting is only enabled in a scene view in edit mode. If playing, only enabled in a game view.
 
 This package is available on URP Forward+ from 2022.3.0f1 (2022 LTS) version.
 
@@ -45,5 +43,4 @@ To add a smoke volume to your scene, create a new gameObject and add 'Smoke Volu
 3. DiffuseGI does not contribute to lighting
 4. Noise texture is not supported 
 5. The number of LocalSmokeVolume is 4 at maximum.
-6. Volumetric lighting is only enabled in a scene view in edit mode. If playing, only enabled in a game view.
-7. TAA in Unity 6 is not supported yet.
+6. TAA in Unity 6 is not supported yet.

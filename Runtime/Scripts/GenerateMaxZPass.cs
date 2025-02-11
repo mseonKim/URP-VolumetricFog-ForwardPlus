@@ -54,9 +54,10 @@ namespace UniversalForwardPlusVolumetric
             var camera = renderingData.cameraData.camera;
             Vector2Int intermediateMaskSize = new Vector2Int();
             Vector2Int finalMaskSize = new Vector2Int();
-
-            intermediateMaskSize.x = VolumetricUtils.DivRoundUp(camera.scaledPixelWidth, 8);
-            intermediateMaskSize.y = VolumetricUtils.DivRoundUp(camera.scaledPixelHeight, 8);
+            Vector2Int targetSize = new Vector2Int((int)(camera.scaledPixelWidth * renderingData.cameraData.renderScale), (int)(camera.scaledPixelHeight * renderingData.cameraData.renderScale));
+            
+            intermediateMaskSize.x = VolumetricUtils.DivRoundUp(targetSize.x, 8);
+            intermediateMaskSize.y = VolumetricUtils.DivRoundUp(targetSize.y, 8);
             finalMaskSize.x = intermediateMaskSize.x / 2;
             finalMaskSize.y = intermediateMaskSize.y / 2;
 
@@ -64,20 +65,20 @@ namespace UniversalForwardPlusVolumetric
             m_PassData.finalMaskSize = finalMaskSize;
 
             var currentParams = m_VBufferParameters;
-            float ratio = (float)currentParams.viewportSize.x / (float)camera.scaledPixelWidth;
+            float ratio = (float)currentParams.viewportSize.x / (float)targetSize.x;
             m_PassData.dilationWidth = ratio < 0.1f ? 2 : ratio < 0.5f ? 1 : 0;
             m_PassData.viewCount = 1;
 
             // Create render texture
-            var desc = new RenderTextureDescriptor(Mathf.CeilToInt(Screen.width * 0.125f), Mathf.CeilToInt(Screen.height * 0.125f), RenderTextureFormat.RFloat, 0);
+            var desc = new RenderTextureDescriptor(Mathf.CeilToInt(targetSize.x * 0.125f), Mathf.CeilToInt(targetSize.y * 0.125f), RenderTextureFormat.RFloat, 0);
             desc.dimension = TextureDimension.Tex2D;
             desc.useDynamicScale = true;
             desc.enableRandomWrite = true;
             RenderingUtils.ReAllocateIfNeeded(ref m_MaxZ8xBufferHandle, desc, FilterMode.Bilinear, name:"MaxZ mask 8x");
             RenderingUtils.ReAllocateIfNeeded(ref m_MaxZBufferHandle, desc, FilterMode.Bilinear, name:"MaxZ mask");
 
-            desc.width = Mathf.CeilToInt(Screen.width / 16.0f);
-            desc.height = Mathf.CeilToInt(Screen.height / 16.0f);
+            desc.width = Mathf.CeilToInt(targetSize.x / 16.0f);
+            desc.height = Mathf.CeilToInt(targetSize.y / 16.0f);
             RenderingUtils.ReAllocateIfNeeded(ref m_DilatedMaxZBufferHandle, desc, FilterMode.Bilinear, name:"Dilated MaxZ mask");
         }
 
@@ -192,9 +193,10 @@ namespace UniversalForwardPlusVolumetric
                 var camera = cameraData.camera;
                 Vector2Int intermediateMaskSize = new Vector2Int();
                 Vector2Int finalMaskSize = new Vector2Int();
+                Vector2Int targetSize = new Vector2Int((int)(camera.scaledPixelWidth * renderingData.cameraData.renderScale), (int)(camera.scaledPixelHeight * renderingData.cameraData.renderScale));
 
-                intermediateMaskSize.x = VolumetricUtils.DivRoundUp(camera.scaledPixelWidth, 8);
-                intermediateMaskSize.y = VolumetricUtils.DivRoundUp(camera.scaledPixelHeight, 8);
+                intermediateMaskSize.x = VolumetricUtils.DivRoundUp(targetSize.x, 8);
+                intermediateMaskSize.y = VolumetricUtils.DivRoundUp(targetSize.y, 8);
                 finalMaskSize.x = intermediateMaskSize.x / 2;
                 finalMaskSize.y = intermediateMaskSize.y / 2;
 
@@ -202,12 +204,12 @@ namespace UniversalForwardPlusVolumetric
                 passData.finalMaskSize = finalMaskSize;
 
                 var currentParams = m_VBufferParameters;
-                float ratio = (float)currentParams.viewportSize.x / (float)camera.scaledPixelWidth;
+                float ratio = (float)currentParams.viewportSize.x / (float)targetSize.x;
                 passData.dilationWidth = ratio < 0.1f ? 2 : ratio < 0.5f ? 1 : 0;
                 passData.viewCount = 1;
 
                 // Create render texture
-                var desc = new RenderTextureDescriptor(Mathf.CeilToInt(Screen.width * 0.125f), Mathf.CeilToInt(Screen.height * 0.125f), RenderTextureFormat.RFloat, 0);
+                var desc = new RenderTextureDescriptor(Mathf.CeilToInt(targetSize.x * 0.125f), Mathf.CeilToInt(targetSize.y * 0.125f), RenderTextureFormat.RFloat, 0);
                 desc.dimension = TextureDimension.Tex2D;
                 desc.useDynamicScale = true;
                 desc.enableRandomWrite = true;
@@ -216,8 +218,8 @@ namespace UniversalForwardPlusVolumetric
                 builder.UseTexture(maxZ8xBufferHandle, AccessFlags.ReadWrite);
                 builder.UseTexture(maxZBufferHandle, AccessFlags.ReadWrite);
 
-                desc.width = Mathf.CeilToInt(Screen.width / 16.0f);
-                desc.height = Mathf.CeilToInt(Screen.height / 16.0f);
+                desc.width = Mathf.CeilToInt(targetSize.x / 16.0f);
+                desc.height = Mathf.CeilToInt(targetSize.y / 16.0f);
                 var dilatedMaxZBufferHandle = UniversalRenderer.CreateRenderGraphTexture(renderGraph, desc, "Dilated MaxZ mask", false, FilterMode.Bilinear);
                 builder.UseTexture(dilatedMaxZBufferHandle, AccessFlags.ReadWrite);
 

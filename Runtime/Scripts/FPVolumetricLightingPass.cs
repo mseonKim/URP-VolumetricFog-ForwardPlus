@@ -172,7 +172,8 @@ namespace UniversalForwardPlusVolumetric
             var xySeqOffset = new Vector4();
             xySeqOffset.Set(s_TAAData.xySeq[sampleIndex].x * m_Config.sampleOffsetWeight, s_TAAData.xySeq[sampleIndex].y * m_Config.sampleOffsetWeight, VolumetricUtils.zSeq[sampleIndex], s_TAAData.frameIndex);
 
-            VolumetricUtils.GetPixelCoordToViewDirWS(cameraData, new Vector4(Screen.width, Screen.height, 1f / Screen.width, 1f / Screen.height), ref m_PixelCoordToViewDirWS);
+            Vector2Int targetSize = new Vector2Int((int)(camera.scaledPixelWidth * cameraData.renderScale), (int)(camera.scaledPixelHeight * cameraData.renderScale));
+            VolumetricUtils.GetPixelCoordToViewDirWS(cameraData, new Vector4(targetSize.x, targetSize.y, 1f / targetSize.x, 1f / targetSize.y), ref m_PixelCoordToViewDirWS);
             var viewportSize = new Vector4(vBufferViewportSize.x, vBufferViewportSize.y, 1.0f / vBufferViewportSize.x, 1.0f / vBufferViewportSize.y);
             VolumetricUtils.GetPixelCoordToViewDirWS(cameraData, viewportSize, ref m_VBufferCoordToViewDirWS);
 
@@ -632,7 +633,8 @@ namespace UniversalForwardPlusVolumetric
             var xySeqOffset = new Vector4();
             xySeqOffset.Set(s_TAAData.xySeq[sampleIndex].x * config.sampleOffsetWeight, s_TAAData.xySeq[sampleIndex].y * config.sampleOffsetWeight, VolumetricUtils.zSeq[sampleIndex], s_TAAData.frameIndex);
 
-            VolumetricUtils.GetPixelCoordToViewDirWS(cameraData, new Vector4(Screen.width, Screen.height, 1f / Screen.width, 1f / Screen.height), ref passData.pixelCoordToViewDirWS);
+            Vector2Int targetSize = new Vector2Int((int)(camera.scaledPixelWidth * cameraData.renderScale), (int)(camera.scaledPixelHeight * cameraData.renderScale));
+            VolumetricUtils.GetPixelCoordToViewDirWS(cameraData, new Vector4(targetSize.x, targetSize.y, 1f / targetSize.x, 1f / targetSize.y), ref passData.pixelCoordToViewDirWS);
             var viewportSize = new Vector4(vBufferViewportSize.x, vBufferViewportSize.y, 1.0f / vBufferViewportSize.x, 1.0f / vBufferViewportSize.y);
             VolumetricUtils.GetPixelCoordToViewDirWS(cameraData, viewportSize, ref passData.vBufferCoordToViewDirWS);
 

@@ -135,10 +135,10 @@ namespace UniversalForwardPlusVolumetric
             sliceCount = config.volumeSliceCount;
         }
 
-        public static Vector3Int ComputeVolumetricViewportSize(VolumetricConfig config, Camera camera, ref float voxelSize)
+        public static Vector3Int ComputeVolumetricViewportSize(VolumetricConfig config, Camera camera, float renderScale, ref float voxelSize)
         {
-            int viewportWidth = camera.scaledPixelWidth;
-            int viewportHeight = camera.scaledPixelHeight;
+            int viewportWidth = (int)(camera.scaledPixelWidth * renderScale);
+            int viewportHeight = (int)(camera.scaledPixelHeight * renderScale);
 
             ComputeVolumetricFogSliceCountAndScreenFraction(config, out var sliceCount, out var screenFraction);
             if (config.screenResolutionPercentage == k_OptimalFogScreenResolutionPercentage)
@@ -157,10 +157,10 @@ namespace UniversalForwardPlusVolumetric
             return new Vector3Int(w, h, d);
         }
 
-        public static VBufferParameters ComputeVolumetricBufferParameters(VolumetricConfig config, Camera camera)
+        public static VBufferParameters ComputeVolumetricBufferParameters(VolumetricConfig config, Camera camera, float renderScale)
         {
             float voxelSize = 0;
-            Vector3Int viewportSize = ComputeVolumetricViewportSize(config, camera, ref voxelSize);
+            Vector3Int viewportSize = ComputeVolumetricViewportSize(config, camera, renderScale, ref voxelSize);
 
             return new VBufferParameters(viewportSize,
                                         config.depthExtent,

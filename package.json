@@ -1,7 +1,7 @@
 {
 	"name": "com.unity.universal-forwardplus-volumetric",
 	"displayName":"Universal Forward+ VolumetricFog",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"unity": "2022.3",
 	"description": "VolumetricFog Package for URP Forward+",
 	"dependencies":

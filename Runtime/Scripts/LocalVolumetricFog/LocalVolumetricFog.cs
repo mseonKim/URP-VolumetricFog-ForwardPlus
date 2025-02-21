@@ -116,7 +116,7 @@ namespace UniversalForwardPlusVolumetric
             // Bubble sort
             int count = volumes.Count;
             int iterNumber = Math.Min(count, 4);
-            var cameraPositionWS = Camera.main.transform.position;
+            var cameraPositionWS = Camera.main?.transform?.position ?? Vector3.zero;
 
             for (int i = 0; i < iterNumber; i++)
             {

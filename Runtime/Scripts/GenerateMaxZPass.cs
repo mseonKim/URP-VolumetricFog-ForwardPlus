@@ -193,7 +193,7 @@ namespace UniversalForwardPlusVolumetric
                 var camera = cameraData.camera;
                 Vector2Int intermediateMaskSize = new Vector2Int();
                 Vector2Int finalMaskSize = new Vector2Int();
-                Vector2Int targetSize = new Vector2Int((int)(camera.scaledPixelWidth * renderingData.cameraData.renderScale), (int)(camera.scaledPixelHeight * renderingData.cameraData.renderScale));
+                Vector2Int targetSize = new Vector2Int((int)(camera.scaledPixelWidth * cameraData.renderScale), (int)(camera.scaledPixelHeight * cameraData.renderScale));
 
                 intermediateMaskSize.x = VolumetricUtils.DivRoundUp(targetSize.x, 8);
                 intermediateMaskSize.y = VolumetricUtils.DivRoundUp(targetSize.y, 8);

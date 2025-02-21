@@ -266,7 +266,9 @@ namespace UniversalForwardPlusVolumetric
         {
             var camera = cameraData.camera;
             viewMatrix = camera.worldToCameraMatrix;
-            projMatrix = cameraData.GetGPUProjectionMatrix();
+            var jitterMatrix = cameraData.antialiasing == AntialiasingMode.TemporalAntiAliasing ?
+                                cameraData.GetProjectionMatrix() * camera.nonJitteredProjectionMatrix.inverse : Matrix4x4.identity;
+            projMatrix = jitterMatrix * GL.GetGPUProjectionMatrix(cameraData.GetProjectionMatrix(), true);
             viewProjMatrix = projMatrix * viewMatrix;
             invViewProjMatrix = viewProjMatrix.inverse;
         }
@@ -361,13 +363,13 @@ namespace UniversalForwardPlusVolumetric
             SetCameraMatrices(cameraData, out var viewMatrix, out var cameraProj, out var viewProjMatrix, out var invViewProjMatrix);
 
             // In XR mode use a more generic matrix to account for asymmetry in the projection
-            var useGenericMatrix = cameraData.xr.enabled;
+            var useGenericMatrix = false;
 
             // Asymmetry is also possible from a user-provided projection, so we must check for it too.
             // Note however, that in case of physical camera, the lens shift term is the only source of
             // asymmetry, and this is accounted for in the optimized path below. Additionally, Unity C++ will
             // automatically disable physical camera when the projection is overridden by user.
-            useGenericMatrix |= IsProjectionMatrixAsymmetric(cameraProj) && !camera.usePhysicalProperties;
+            useGenericMatrix |= cameraData.antialiasing != AntialiasingMode.TemporalAntiAliasing && IsProjectionMatrixAsymmetric(cameraProj) && !camera.usePhysicalProperties;
 
             if (useGenericMatrix)
             {
@@ -423,7 +425,9 @@ namespace UniversalForwardPlusVolumetric
         {
             var camera = cameraData.camera;
             viewMatrix = camera.worldToCameraMatrix;
-            projMatrix = GL.GetGPUProjectionMatrix(cameraData.GetProjectionMatrix(), true);
+            var jitterMatrix = cameraData.antialiasing == AntialiasingMode.TemporalAntiAliasing ?
+                                cameraData.GetProjectionMatrix() * camera.nonJitteredProjectionMatrix.inverse : Matrix4x4.identity;
+            projMatrix = jitterMatrix * GL.GetGPUProjectionMatrix(cameraData.GetProjectionMatrix(), true);
             viewProjMatrix = projMatrix * viewMatrix;
             invViewProjMatrix = viewProjMatrix.inverse;
         }
@@ -434,13 +438,13 @@ namespace UniversalForwardPlusVolumetric
             SetCameraMatrices(cameraData, out var viewMatrix, out var cameraProj, out var viewProjMatrix, out var invViewProjMatrix);
 
             // In XR mode use a more generic matrix to account for asymmetry in the projection
-            var useGenericMatrix = cameraData.xr.enabled;
+            var useGenericMatrix = false;
 
             // Asymmetry is also possible from a user-provided projection, so we must check for it too.
             // Note however, that in case of physical camera, the lens shift term is the only source of
             // asymmetry, and this is accounted for in the optimized path below. Additionally, Unity C++ will
             // automatically disable physical camera when the projection is overridden by user.
-            useGenericMatrix |= IsProjectionMatrixAsymmetric(cameraProj) && !camera.usePhysicalProperties;
+            useGenericMatrix |= cameraData.antialiasing != AntialiasingMode.TemporalAntiAliasing && IsProjectionMatrixAsymmetric(cameraProj) && !camera.usePhysicalProperties;
 
             if (useGenericMatrix)
             {

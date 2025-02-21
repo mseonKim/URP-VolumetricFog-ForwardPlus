@@ -43,4 +43,3 @@ To add a smoke volume to your scene, create a new gameObject and add 'Smoke Volu
 3. DiffuseGI does not contribute to lighting
 4. Noise texture is not supported 
 5. The number of LocalSmokeVolume is 4 at maximum.
-6. TAA in Unity 6 is not supported yet.

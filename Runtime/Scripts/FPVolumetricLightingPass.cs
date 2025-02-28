@@ -632,7 +632,7 @@ namespace UniversalForwardPlusVolumetric
             int sampleIndex = s_TAAData.frameIndex % 7;
             var xySeqOffset = new Vector4();
             xySeqOffset.Set(s_TAAData.xySeq[sampleIndex].x * config.sampleOffsetWeight, s_TAAData.xySeq[sampleIndex].y * config.sampleOffsetWeight, VolumetricUtils.zSeq[sampleIndex], s_TAAData.frameIndex);
-
+            
             Vector2Int targetSize = new Vector2Int((int)(camera.scaledPixelWidth * cameraData.renderScale), (int)(camera.scaledPixelHeight * cameraData.renderScale));
             VolumetricUtils.GetPixelCoordToViewDirWS(cameraData, new Vector4(targetSize.x, targetSize.y, 1f / targetSize.x, 1f / targetSize.y), ref passData.pixelCoordToViewDirWS);
             var viewportSize = new Vector4(vBufferViewportSize.x, vBufferViewportSize.y, 1.0f / vBufferViewportSize.x, 1.0f / vBufferViewportSize.y);
@@ -649,6 +649,7 @@ namespace UniversalForwardPlusVolumetric
             passData.volumetricLightingCB._VBufferScatteringIntensity = config.directionalScatteringIntensity;
             passData.volumetricLightingCB._VBufferLocalScatteringIntensity = config.localScatteringIntensity;
             passData.volumetricLightingCB._VBufferLastSliceDist = vBufferParameters.ComputeLastSliceDistance((uint)vBufferViewportSize.z);
+            passData.volumetricLightingCB._VBufferNumFrames = config.blendWeight;
             passData.volumetricLightingCB._VBufferViewportSize = viewportSize;
             passData.volumetricLightingCB._VBufferLightingViewportScale = vBufferParameters.ComputeViewportScale(vBufferViewportSize);
             passData.volumetricLightingCB._VBufferLightingViewportLimit = vBufferParameters.ComputeViewportLimit(vBufferViewportSize);

@@ -39,7 +39,7 @@ CBUFFER_START(ShaderVariablesVolumetricLighting)
     float       _VBufferScatteringIntensity;
     float       _VBufferLocalScatteringIntensity;
     float       _VBufferLastSliceDist;
-    float       _vbuffer_pad00_;
+    float       _VBufferNumFrames;
     float4      _VBufferViewportSize;
     float4      _VBufferLightingViewportScale;
     float4      _VBufferLightingViewportLimit;

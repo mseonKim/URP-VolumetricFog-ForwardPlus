@@ -80,6 +80,7 @@ namespace UniversalForwardPlusVolumetric
         public bool filterVolume => (denoiseMode == DenoiseMode.Gaussian || denoiseMode == DenoiseMode.Both);
         public bool enableReprojection => (denoiseMode == DenoiseMode.Reprojection || denoiseMode == DenoiseMode.Both);
         
+        [Header("Volumetric Lighting - Advanced")]
         [Range(0.001f, 1f)]
         public float sampleOffsetWeight = 1f;
         [Tooltip("Controls the distribution of slices automatically based on camera distance from (0, 0, 0). If camera gets close to (0, 0, 0), the value gets 0(= exponential). It gets 1 if camera gets far from (0, 0, 0).")]
@@ -87,5 +88,8 @@ namespace UniversalForwardPlusVolumetric
         [Tooltip("Controls the distribution of slices along the Camera's focal axis. 0 is exponential distribution and 1 is linear distribution.")]
         [Range(0, 1f)]
         public float sliceDistributionUniformity = 0.75f;
+
+        [Tooltip("Controls the history weight. Lower values reduce the afterimage effect but also decrease the smoothness of light blending. The default value is 7.")]
+        [Range(1, 7)] public int blendWeight = 7;
     }
 }

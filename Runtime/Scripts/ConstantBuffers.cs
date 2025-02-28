@@ -28,7 +28,7 @@ namespace UniversalForwardPlusVolumetric
         public float        _VBufferScatteringIntensity;
         public float        _VBufferLocalScatteringIntensity;
         public float        _VBufferLastSliceDist;
-        public float        _vbuffer_pad00_;
+        public float        _VBufferNumFrames;
         public Vector4      _VBufferViewportSize;
         public Vector4      _VBufferLightingViewportScale;
         public Vector4      _VBufferLightingViewportLimit;

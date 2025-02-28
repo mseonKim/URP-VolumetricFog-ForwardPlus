@@ -42,7 +42,7 @@ float ComputeHistoryWeight()
     // X = (1 / n) * ValueAtFrame[n] + ((n - 1) / n) * (1 / (n - 1)) * Sum{i from 1 to n - 1}{ValueAtFrame[i]}.
     // X = (1 / n) * ValueAtFrame[n] + (1 / n) * Sum{i from 1 to n - 1}{ValueAtFrame[i]}.
     // X = Sum{i from 1 to n}{ValueAtFrame[i] / n}.
-    float numFrames     = 7;
+    float numFrames     = _VBufferNumFrames;
     float frameWeight   = 1 / numFrames;
     float historyWeight = 1 - frameWeight;
 

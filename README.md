@@ -17,7 +17,6 @@ This package is available on URP Forward+ from 2022.3.0f1 (2022 LTS) version.
 1. Add 'FP Volumetric Fog' renderer feature to Renderer data (Make sure to use Forward+)
 2. Create 'Volumetric Config' via 'Create/UniversalVolumetric/VolumetricFogConfig'
 3. Link the config asset to the renderer feature
-4. To use RenderGraph in Unity 6, add `ENABLE_URP_VOLUEMTRIC_FOG_RENDERGRAPH` define to `Scripting Define Symbols` in the `Project Settings > Player > Other Settings > Script Compilation`.
 
 NOTE - If you use Unity 6 LTS and the rendering result is not as expected, change `Shader Precision Model` setting in `Project Settings > Player > Other Settings > Shader Settings`.
 

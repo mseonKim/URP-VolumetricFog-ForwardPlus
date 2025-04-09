@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.Experimental.Rendering;
-#if ENABLE_URP_VOLUEMTRIC_FOG_RENDERGRAPH
+#if UNITY_6000_0_OR_NEWER
 using UnityEngine.Rendering.RenderGraphModule;
 using UnityEngine.Rendering.RenderGraphModule.Util;
 #endif
@@ -396,7 +396,7 @@ namespace UniversalForwardPlusVolumetric
         }
         
 
-#if ENABLE_URP_VOLUEMTRIC_FOG_RENDERGRAPH
+#if UNITY_6000_0_OR_NEWER
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameContext)
         {
             if (m_VolumeVoxelizationCS == null

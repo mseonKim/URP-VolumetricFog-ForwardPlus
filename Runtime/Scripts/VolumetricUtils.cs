@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-#if ENABLE_URP_VOLUEMTRIC_FOG_RENDERGRAPH
+#if UNITY_6000_0_OR_NEWER
 using UnityEngine.Rendering.RenderGraphModule;
 #endif
 
@@ -420,7 +420,7 @@ namespace UniversalForwardPlusVolumetric
         }
 
         
-#if ENABLE_URP_VOLUEMTRIC_FOG_RENDERGRAPH
+#if UNITY_6000_0_OR_NEWER
         internal static void SetCameraMatrices(UniversalCameraData cameraData, out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix, out Matrix4x4 viewProjMatrix, out Matrix4x4 invViewProjMatrix)
         {
             var camera = cameraData.camera;

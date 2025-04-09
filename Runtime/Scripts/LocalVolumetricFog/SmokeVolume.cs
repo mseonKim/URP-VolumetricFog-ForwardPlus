@@ -41,7 +41,7 @@ namespace UniversalForwardPlusVolumetric
             cmd.SetComputeVectorParam(cs, IDs._SmokeVolumeParams1, new Vector4(tiling, detailNoiseTiling, flatten, 0));
         }
 
-#if ENABLE_URP_VOLUEMTRIC_FOG_RENDERGRAPH
+#if UNITY_6000_0_OR_NEWER
         public override void SetComputeShaderProperties(ComputeCommandBuffer cmd, ComputeShader cs, int kernel)
         {
             cs.SetTexture(kernel, IDs._MaskTexture, mask);

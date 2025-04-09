@@ -189,7 +189,7 @@ namespace UniversalForwardPlusVolumetric
             // Set mask texture and material properties here
         }
 
-#if ENABLE_URP_VOLUEMTRIC_FOG_RENDERGRAPH
+#if UNITY_6000_0_OR_NEWER
         public virtual void SetComputeShaderProperties(ComputeCommandBuffer cmd, ComputeShader cs, int kernel)
         {
             // Set mask texture and material properties here

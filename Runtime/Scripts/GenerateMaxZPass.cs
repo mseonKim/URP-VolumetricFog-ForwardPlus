@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-#if ENABLE_URP_VOLUEMTRIC_FOG_RENDERGRAPH
+#if UNITY_6000_0_OR_NEWER
 using UnityEngine.Rendering.RenderGraphModule;
 #endif
 
@@ -169,7 +169,7 @@ namespace UniversalForwardPlusVolumetric
             public int viewCount;
         }
 
-#if ENABLE_URP_VOLUEMTRIC_FOG_RENDERGRAPH
+#if UNITY_6000_0_OR_NEWER
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameContext)
         {
             if (m_PassData.generateMaxZCS == null)

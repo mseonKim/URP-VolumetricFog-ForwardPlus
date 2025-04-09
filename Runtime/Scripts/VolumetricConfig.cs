@@ -76,7 +76,7 @@ namespace UniversalForwardPlusVolumetric
         [Range(1, 256)]
         public int volumeSliceCount = 128;
 
-        public DenoiseMode denoiseMode = DenoiseMode.Gaussian;
+        public DenoiseMode denoiseMode = DenoiseMode.Both;
         public bool filterVolume => (denoiseMode == DenoiseMode.Gaussian || denoiseMode == DenoiseMode.Both);
         public bool enableReprojection => (denoiseMode == DenoiseMode.Reprojection || denoiseMode == DenoiseMode.Both);
         

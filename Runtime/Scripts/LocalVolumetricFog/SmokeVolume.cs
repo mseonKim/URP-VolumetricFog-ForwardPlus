@@ -44,6 +44,9 @@ namespace UniversalForwardPlusVolumetric
 #if UNITY_6000_0_OR_NEWER
         public override void SetComputeShaderProperties(ComputeCommandBuffer cmd, ComputeShader cs, int kernel)
         {
+            if (cs == null || mask == null)
+                return;
+                
             cs.SetTexture(kernel, IDs._MaskTexture, mask);
             var normalizedWindDirection = windDirection.normalized;
             cmd.SetComputeVectorParam(cs, IDs._SmokeVolumeParams0, new Vector4(windSpeed, counterFlowSpeed, normalizedWindDirection.x, normalizedWindDirection.y));

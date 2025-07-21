@@ -21,7 +21,7 @@ namespace UniversalForwardPlusVolumetric
         
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
         {
-            if (config == null)
+            if (config == null || !config.enabled)
                 return;
 
             var cameraType = renderingData.cameraData.cameraType;

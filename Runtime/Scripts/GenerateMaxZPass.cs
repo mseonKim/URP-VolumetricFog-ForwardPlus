@@ -237,6 +237,12 @@ namespace UniversalForwardPlusVolumetric
             if (cs == null)
                 return;
 
+            if (!data.maxZBufferHandle.IsValid() || !data.maxZ8xBufferHandle.IsValid() || !data.dilatedMaxZBufferHandle.IsValid())
+            {
+                Shader.SetGlobalTexture(IDs._MaxZMaskTexture, Texture2D.blackTexture);
+                return;
+            }
+
             using (new ProfilingScope(cmd, profilingSampler))
             {
                 var kernel = data.maxZKernel;

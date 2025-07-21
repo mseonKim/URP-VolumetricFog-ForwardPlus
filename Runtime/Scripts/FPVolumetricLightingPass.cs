@@ -405,6 +405,7 @@ namespace UniversalForwardPlusVolumetric
                 return;
             
             var blitParameters = new RenderGraphUtils.BlitMaterialParameters();
+            var vBufferLightingHandle = TextureHandle.nullHandle;
 
             using (var builder = renderGraph.AddComputePass<RenderGraphPassData>("Volumetric Lighting", out var passData))
             {
@@ -431,7 +432,7 @@ namespace UniversalForwardPlusVolumetric
                 desc.volumeDepth = vBufferViewportSize.z;
                 desc.enableRandomWrite = true;
                 var vBufferDensityHandle = UniversalRenderer.CreateRenderGraphTexture(renderGraph, desc, "_VBufferDensity", false);
-                var vBufferLightingHandle = UniversalRenderer.CreateRenderGraphTexture(renderGraph, desc, "_VBufferLighting", false);
+                vBufferLightingHandle = UniversalRenderer.CreateRenderGraphTexture(renderGraph, desc, "_VBufferLighting", false);
 
                 builder.UseTexture(vBufferDensityHandle, AccessFlags.ReadWrite);
                 builder.UseTexture(vBufferLightingHandle, AccessFlags.ReadWrite);
@@ -489,9 +490,12 @@ namespace UniversalForwardPlusVolumetric
                 blitParameters.material = m_ResolveMat;
             }
             
+            // Resolve
             using (var builder = renderGraph.AddRasterRenderPass<RenderGraphPassData>("Volumetric Lighting Resolve", out var passData))
             {
-                // Resolve
+                if (!vBufferLightingHandle.IsValid())
+                    return;
+                
                 // builder.UseTexture(blitParameters.source, AccessFlags.Read);
                 builder.SetRenderAttachment(blitParameters.destination, 0);
                 builder.SetRenderFunc((RenderGraphPassData data, RasterGraphContext context) =>
@@ -506,6 +510,9 @@ namespace UniversalForwardPlusVolumetric
 
         private static void ExecutePass(ComputeCommandBuffer cmd, RenderGraphPassData data)
         {
+            if (!data.vBufferDensityHandle.IsValid() || !data.vBufferLightingHandle.IsValid())
+                return;
+            
             s_TAAData.frameIndex = (s_TAAData.frameIndex + 1) % 14;
 
             var config = data.config;
@@ -575,7 +582,7 @@ namespace UniversalForwardPlusVolumetric
                 if (config.filterVolume)
                 {
                     cmd.SetComputeTextureParam(volumetricLightingFilteringCS, s_VBufferFilteringCSKernal, IDs._VBufferLighting, data.vBufferLightingHandle);
-                    if (s_TAAData.filteringNeedsExtraBuffer)
+                    if (s_TAAData.filteringNeedsExtraBuffer && data.vBufferLightingFilteredHandle.IsValid())
                     {
                         cmd.SetComputeTextureParam(volumetricLightingFilteringCS, s_VBufferFilteringCSKernal, IDs._VBufferLightingFiltered, data.vBufferLightingFilteredHandle);
                     }

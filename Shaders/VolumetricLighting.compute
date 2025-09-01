@@ -98,6 +98,7 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
     // the ray with the screen plane, e.i. (ViewSpace(jitterDirWS).z = 1). That's a little expensive.
     // So, as an approximation, we ignore the curvature of the frustum.
     uint2 pixelCoord = (uint2)((voxelCoord + 0.5 + sampleOffset) * _VBufferVoxelSize);
+	pixelCoord = min(pixelCoord, _ScreenSize.xy - 1);
 
     // Do not jitter 'voxelCoord' else. It's expected to correspond to the center of the voxel.
     PositionInputs posInput = GetPositionInput(voxelCoord, _VBufferViewportSize.zw);

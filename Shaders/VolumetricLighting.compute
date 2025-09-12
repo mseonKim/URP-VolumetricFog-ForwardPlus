@@ -130,6 +130,7 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
 
     // Ray marching
     uint slice = 0;
+    float4 lastLighting = 0;
     for (; slice < _VBufferSliceCount; slice++)
     {
         // uint3 voxelCoord3 = uint3(voxelCoord, slice + _VBufferSliceCount * unity_StereoEyeIndex);
@@ -289,7 +290,8 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
         // Compute the optical depth up to the center of the interval.
         opticalDepth += 0.5 * blendValue.a;
 
-        _VBufferLighting[voxelCoord3] = LinearizeRGBD_Float(float4(/*FastTonemap*/(totalRadiance), opticalDepth)) * float4(CurrentExposureMultiplier().xxx, 1);
+        lastLighting = LinearizeRGBD_Float(float4(/*FastTonemap*/(totalRadiance), opticalDepth)) * float4(CurrentExposureMultiplier().xxx, 1);
+        _VBufferLighting[voxelCoord3] = lastLighting;
 
         // Compute the optical depth up to the end of the interval.
         opticalDepth += 0.5 * blendValue.a;
@@ -305,9 +307,9 @@ void VolumetricLighting(uint3 dispatchThreadId : SV_DispatchThreadID,
     {
         // uint3 voxelCoord = uint3(pixelCoord, slice + _VBufferSliceCount * unity_StereoEyeIndex);
         uint3 voxelCoord3 = uint3(posInput.positionSS, slice);
-        _VBufferLighting[voxelCoord3] = 0;
+        _VBufferLighting[voxelCoord3] = lastLighting;
 #ifdef ENABLE_REPROJECTION
-        _VBufferFeedback[voxelCoord3] = 0;
+        _VBufferFeedback[voxelCoord3] = lastLighting;
 #endif
     }
 

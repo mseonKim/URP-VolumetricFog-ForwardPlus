@@ -265,7 +265,7 @@ VoxelLighting EvaluateVoxelLightingLocal(float2 pixelCoord, float extinction, fl
     #endif
 
         // Jitter
-        float lightSqRadius = rcp(distanceAndSpotAttenuation.x);
+        float lightSqRadius = rcp(max(distanceAndSpotAttenuation.x, HALF_MIN));
         float t, distSq, rcpPdf;
         ImportanceSamplePunctualLight(rndVal, lightPositionWS.xyz, lightSqRadius,
                                       ray.originWS, ray.jitterDirWS, t0, t1,
@@ -275,7 +275,7 @@ VoxelLighting EvaluateVoxelLightingLocal(float2 pixelCoord, float extinction, fl
         float3 lightVector = lightPositionWS.xyz - positionWS * lightPositionWS.w;
         float distanceSqr = max(dot(lightVector, lightVector), HALF_MIN);
 
-        half3 lightDirection = half3(lightVector * rsqrt(distanceSqr));
+        float3 lightDirection = lightVector * rsqrt(distanceSqr);
         float attenuation = DistanceAttenuation(distanceSqr, distanceAndSpotAttenuation.xy) * AngleAttenuation(spotDirection.xyz, lightDirection, distanceAndSpotAttenuation.zw);
         color *= attenuation;
 

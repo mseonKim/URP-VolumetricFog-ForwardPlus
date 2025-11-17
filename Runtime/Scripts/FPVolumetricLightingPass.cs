@@ -1,8 +1,8 @@
 using System;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-using UnityEngine.Experimental.Rendering;
 #if UNITY_6000_0_OR_NEWER
 using UnityEngine.Rendering.RenderGraphModule;
 using UnityEngine.Rendering.RenderGraphModule.Util;
@@ -56,9 +56,9 @@ namespace UniversalForwardPlusVolumetric
         private ShaderVariablesLocalVolume m_LocalVolumeCB = new ShaderVariablesLocalVolume();
 
 
-        public FPVolumetricLightingPass()
+        public FPVolumetricLightingPass(RenderPassEvent renderPassEvent)
         {
-            renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
+            this.renderPassEvent = renderPassEvent;
             m_VBufferCoordToViewDirWS = new Matrix4x4[1]; // Currently xr not supported
             s_TAAData = new TAAData();
         }
@@ -102,15 +102,15 @@ namespace UniversalForwardPlusVolumetric
             desc.dimension = TextureDimension.Tex3D;
             desc.volumeDepth = vBufferViewportSize.z;
             desc.enableRandomWrite = true;
-            RenderingUtils.ReAllocateIfNeeded(ref m_VBufferDensityHandle, desc, FilterMode.Point, name:"_VBufferDensity");
-            RenderingUtils.ReAllocateIfNeeded(ref m_VBufferLightingHandle, desc, FilterMode.Point, name:"_VBufferLighting");
+            RenderingUtils.ReAllocateIfNeeded(ref m_VBufferDensityHandle, desc, FilterMode.Point, name: "_VBufferDensity");
+            RenderingUtils.ReAllocateIfNeeded(ref m_VBufferLightingHandle, desc, FilterMode.Point, name: "_VBufferLighting");
 
             s_TAAData.filteringNeedsExtraBuffer = !SystemInfo.IsFormatSupported(GraphicsFormat.R16G16B16A16_SFloat, FormatUsage.LoadStore);
 
             // Filtering
             if (m_Config.filterVolume && s_TAAData.filteringNeedsExtraBuffer)
             {
-                RenderingUtils.ReAllocateIfNeeded(ref m_VBufferLightingFilteredHandle, desc, FilterMode.Point, name:"VBufferLightingFiltered");
+                RenderingUtils.ReAllocateIfNeeded(ref m_VBufferLightingFilteredHandle, desc, FilterMode.Point, name: "VBufferLightingFiltered");
                 CoreUtils.SetKeyword(m_VolumetricLightingFilteringCS, "NEED_SEPARATE_OUTPUT", s_TAAData.filteringNeedsExtraBuffer);
             }
 
@@ -196,11 +196,11 @@ namespace UniversalForwardPlusVolumetric
             m_VolumetricLightingCB._VBufferDistanceEncodingParams = m_VBufferParameters.depthEncodingParams;
             m_VolumetricLightingCB._VBufferDistanceDecodingParams = m_VBufferParameters.depthDecodingParams;
             m_VolumetricLightingCB._VBufferSampleOffset = xySeqOffset;
-        #if UNITY_EDITOR    // _RTHandleScale is different for scene & game view.
+#if UNITY_EDITOR    // _RTHandleScale is different for scene & game view.
             m_VolumetricLightingCB._VLightingRTHandleScale = Vector4.one;
-        #else
+#else
             m_VolumetricLightingCB._VLightingRTHandleScale = RTHandles.rtHandleProperties.rtHandleScale;
-        #endif
+#endif
             m_VolumetricLightingCB._VBufferCoordToViewDirWS = m_VBufferCoordToViewDirWS[0];
 
             ConstantBuffer.PushGlobal(cmd, m_VolumetricLightingCB, IDs._ShaderVariablesVolumetricLighting);
@@ -222,10 +222,10 @@ namespace UniversalForwardPlusVolumetric
             cb._VolumetricMaterialObbUp = obb.up;
             cb._VolumetricMaterialObbExtents = new Vector3(obb.extentX, obb.extentY, obb.extentZ);
             cb._VolumetricMaterialObbCenter = obb.center;
-            
+
             cb._VolumetricMaterialAlbedo = engineData.albedo;
             cb._VolumetricMaterialExtinction = engineData.extinction;
-            
+
             cb._VolumetricMaterialRcpPosFaceFade = engineData.rcpPosFaceFade;
             cb._VolumetricMaterialRcpNegFaceFade = engineData.rcpNegFaceFade;
             cb._VolumetricMaterialInvertFade = engineData.invertFade;
@@ -346,7 +346,7 @@ namespace UniversalForwardPlusVolumetric
         {
             if (!config.volumetricLighting)
                 return;
-            
+
             Debug.Assert(m_VolumetricHistoryBuffers == null);
 
             m_VolumetricHistoryBuffers = new RTHandle[2];
@@ -379,7 +379,7 @@ namespace UniversalForwardPlusVolumetric
         {
             if (!config.volumetricLighting || !config.enableReprojection)
                 return false;
-            
+
             if (m_VolumetricHistoryBuffers == null)
                 return true;
 
@@ -391,10 +391,10 @@ namespace UniversalForwardPlusVolumetric
                 m_VolumetricHistoryBuffers[0].rt.height != viewportSize.y ||
                 m_VolumetricHistoryBuffers[0].rt.volumeDepth != viewportSize.z)
                 return true;
-            
+
             return false;
         }
-        
+
 
 #if UNITY_6000_0_OR_NEWER
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameContext)
@@ -403,7 +403,7 @@ namespace UniversalForwardPlusVolumetric
                 || m_VolumetricLightingCS == null
                 || m_VolumetricLightingFilteringCS == null)
                 return;
-            
+
             var blitParameters = new RenderGraphUtils.BlitMaterialParameters();
             var vBufferLightingHandle = TextureHandle.nullHandle;
 
@@ -419,9 +419,9 @@ namespace UniversalForwardPlusVolumetric
                 UniversalCameraData cameraData = frameContext.Get<UniversalCameraData>();
                 UniversalResourceData resourceData = frameContext.Get<UniversalResourceData>();
                 passData.cameraData = cameraData;
-                
+
                 builder.AllowGlobalStateModification(true);
-                
+
                 // Setup
                 var config = passData.config;
                 var vBufferViewportSize = passData.vBufferParameters.viewportSize;
@@ -483,19 +483,19 @@ namespace UniversalForwardPlusVolumetric
                 passData.localVolumes = LocalVolumetricFog.SortVolumes();
 
                 builder.SetRenderFunc((RenderGraphPassData data, ComputeGraphContext context) => ExecutePass(context.cmd, data));
-                
+
                 // Use member pass data to transfer blit parameters.
                 blitParameters.source = resourceData.cameraColor;
                 blitParameters.destination = resourceData.cameraColor;
                 blitParameters.material = m_ResolveMat;
             }
-            
+
             // Resolve
             using (var builder = renderGraph.AddRasterRenderPass<RenderGraphPassData>("Volumetric Lighting Resolve", out var passData))
             {
                 if (!vBufferLightingHandle.IsValid())
                     return;
-                
+
                 // builder.UseTexture(blitParameters.source, AccessFlags.Read);
                 builder.SetRenderAttachment(blitParameters.destination, 0);
                 builder.SetRenderFunc((RenderGraphPassData data, RasterGraphContext context) =>
@@ -512,7 +512,7 @@ namespace UniversalForwardPlusVolumetric
         {
             if (!data.vBufferDensityHandle.IsValid() || !data.vBufferLightingHandle.IsValid())
                 return;
-            
+
             s_TAAData.frameIndex = (s_TAAData.frameIndex + 1) % 14;
 
             var config = data.config;
@@ -530,7 +530,7 @@ namespace UniversalForwardPlusVolumetric
                 cmd.SetComputeTextureParam(data.volumeVoxelizationCS, s_VolumeVoxelizationCSKernal, IDs._VBufferDensity, data.vBufferDensityHandle);
                 cmd.DispatchCompute(data.volumeVoxelizationCS, s_VolumeVoxelizationCSKernal, width, height, 1);
             }
-            
+
             // Set global shader variables
             cmd.SetGlobalTexture(IDs._VBufferLighting, data.vBufferLightingHandle);
             cmd.SetGlobalMatrix(IDs._PixelCoordToViewDirWS, data.pixelCoordToViewDirWS);
@@ -640,7 +640,7 @@ namespace UniversalForwardPlusVolumetric
             int sampleIndex = s_TAAData.frameIndex % 7;
             var xySeqOffset = new Vector4();
             xySeqOffset.Set(s_TAAData.xySeq[sampleIndex].x * config.sampleOffsetWeight, s_TAAData.xySeq[sampleIndex].y * config.sampleOffsetWeight, VolumetricUtils.zSeq[sampleIndex], s_TAAData.frameIndex);
-            
+
             Vector2Int targetSize = new Vector2Int((int)(camera.scaledPixelWidth * cameraData.renderScale), (int)(camera.scaledPixelHeight * cameraData.renderScale));
             VolumetricUtils.GetPixelCoordToViewDirWS(cameraData, new Vector4(targetSize.x, targetSize.y, 1f / targetSize.x, 1f / targetSize.y), ref passData.pixelCoordToViewDirWS);
             var viewportSize = new Vector4(vBufferViewportSize.x, vBufferViewportSize.y, 1.0f / vBufferViewportSize.x, 1.0f / vBufferViewportSize.y);
@@ -664,15 +664,15 @@ namespace UniversalForwardPlusVolumetric
             passData.volumetricLightingCB._VBufferDistanceEncodingParams = vBufferParameters.depthEncodingParams;
             passData.volumetricLightingCB._VBufferDistanceDecodingParams = vBufferParameters.depthDecodingParams;
             passData.volumetricLightingCB._VBufferSampleOffset = xySeqOffset;
-        #if UNITY_EDITOR    // _RTHandleScale is different for scene & game view.
+#if UNITY_EDITOR    // _RTHandleScale is different for scene & game view.
             passData.volumetricLightingCB._VLightingRTHandleScale = Vector4.one;
-        #else
+#else
             passData.volumetricLightingCB._VLightingRTHandleScale = RTHandles.rtHandleProperties.rtHandleScale;
-        #endif
+#endif
             passData.volumetricLightingCB._VBufferCoordToViewDirWS = passData.vBufferCoordToViewDirWS[0];
 
             ConstantBuffer.PushGlobal(passData.volumetricLightingCB, IDs._ShaderVariablesVolumetricLighting);
-            
+
             CoreUtils.SetKeyword(passData.volumetricLightingCS, "ENABLE_REPROJECTION", config.enableReprojection);
             CoreUtils.SetKeyword(passData.volumetricLightingCS, "ENABLE_ANISOTROPY", config.anisotropy != 0f);
             CoreUtils.SetKeyword(passData.volumetricLightingCS, "SUPPORT_DIRECTIONAL_LIGHTS", config.enableDirectionalLight);
@@ -694,13 +694,13 @@ namespace UniversalForwardPlusVolumetric
             public LocalVolumetricFog[] localVolumes;
             public Matrix4x4[] vBufferCoordToViewDirWS;
             public Matrix4x4 pixelCoordToViewDirWS;
-            
+
             public UniversalCameraData cameraData;
 
             public ShaderVariablesFog fogCB = new ShaderVariablesFog();
             public ShaderVariablesVolumetricLighting volumetricLightingCB = new ShaderVariablesVolumetricLighting();
             public ShaderVariablesLocalVolume localVolumeCB = new ShaderVariablesLocalVolume();
-            
+
             public RenderGraphPassData()
             {
                 vBufferCoordToViewDirWS = new Matrix4x4[1];
@@ -710,4 +710,3 @@ namespace UniversalForwardPlusVolumetric
 #endif
     }
 }
-

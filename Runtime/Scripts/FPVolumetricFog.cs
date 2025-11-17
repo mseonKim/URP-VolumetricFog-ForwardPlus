@@ -15,10 +15,10 @@ namespace UniversalForwardPlusVolumetric
 
         public override void Create()
         {
-            m_GenerateMaxZPass = new GenerateMaxZPass();
-            m_VolumetricLightingPass = new FPVolumetricLightingPass();
+            m_GenerateMaxZPass = new GenerateMaxZPass(config.renderPassEvent);
+            m_VolumetricLightingPass = new FPVolumetricLightingPass(config.renderPassEvent);
         }
-        
+
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
         {
             if (config == null || !config.enabled)

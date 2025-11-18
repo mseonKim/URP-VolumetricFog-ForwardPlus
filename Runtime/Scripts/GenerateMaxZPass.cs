@@ -17,9 +17,9 @@ namespace UniversalForwardPlusVolumetric
         private VBufferParameters m_VBufferParameters;
         private ProfilingSampler m_ProfilingSampler;
 
-        public GenerateMaxZPass()
+        public GenerateMaxZPass(RenderPassEvent renderPassEvent)
         {
-            renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
+            this.renderPassEvent = renderPassEvent;
             m_PassData = new GenerateMaxZMaskPassData();
         }
 
@@ -44,7 +44,7 @@ namespace UniversalForwardPlusVolumetric
         {
             if (m_PassData.generateMaxZCS == null)
                 return;
-            
+
             CoreUtils.SetKeyword(m_PassData.generateMaxZCS, "PLANAR_OBLIQUE_DEPTH", false);
 
             m_PassData.maxZKernel = m_PassData.generateMaxZCS.FindKernel("ComputeMaxZ");
@@ -55,7 +55,7 @@ namespace UniversalForwardPlusVolumetric
             Vector2Int intermediateMaskSize = new Vector2Int();
             Vector2Int finalMaskSize = new Vector2Int();
             Vector2Int targetSize = new Vector2Int((int)(camera.scaledPixelWidth * renderingData.cameraData.renderScale), (int)(camera.scaledPixelHeight * renderingData.cameraData.renderScale));
-            
+
             intermediateMaskSize.x = VolumetricUtils.DivRoundUp(targetSize.x, 8);
             intermediateMaskSize.y = VolumetricUtils.DivRoundUp(targetSize.y, 8);
             finalMaskSize.x = intermediateMaskSize.x / 2;
@@ -74,12 +74,12 @@ namespace UniversalForwardPlusVolumetric
             desc.dimension = TextureDimension.Tex2D;
             desc.useDynamicScale = true;
             desc.enableRandomWrite = true;
-            RenderingUtils.ReAllocateIfNeeded(ref m_MaxZ8xBufferHandle, desc, FilterMode.Bilinear, name:"MaxZ mask 8x");
-            RenderingUtils.ReAllocateIfNeeded(ref m_MaxZBufferHandle, desc, FilterMode.Bilinear, name:"MaxZ mask");
+            RenderingUtils.ReAllocateIfNeeded(ref m_MaxZ8xBufferHandle, desc, FilterMode.Bilinear, name: "MaxZ mask 8x");
+            RenderingUtils.ReAllocateIfNeeded(ref m_MaxZBufferHandle, desc, FilterMode.Bilinear, name: "MaxZ mask");
 
             desc.width = Mathf.CeilToInt(targetSize.x / 16.0f);
             desc.height = Mathf.CeilToInt(targetSize.y / 16.0f);
-            RenderingUtils.ReAllocateIfNeeded(ref m_DilatedMaxZBufferHandle, desc, FilterMode.Bilinear, name:"Dilated MaxZ mask");
+            RenderingUtils.ReAllocateIfNeeded(ref m_DilatedMaxZBufferHandle, desc, FilterMode.Bilinear, name: "Dilated MaxZ mask");
         }
 
 #if UNITY_6000_0_OR_NEWER

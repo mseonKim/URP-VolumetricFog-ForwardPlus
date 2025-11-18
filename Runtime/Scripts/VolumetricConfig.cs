@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 namespace UniversalForwardPlusVolumetric
 {
@@ -79,7 +80,7 @@ namespace UniversalForwardPlusVolumetric
         public DenoiseMode denoiseMode = DenoiseMode.Both;
         public bool filterVolume => (denoiseMode == DenoiseMode.Gaussian || denoiseMode == DenoiseMode.Both);
         public bool enableReprojection => (denoiseMode == DenoiseMode.Reprojection || denoiseMode == DenoiseMode.Both);
-        
+
         [Header("Volumetric Lighting - Advanced")]
         [Range(0.001f, 1f)]
         public float sampleOffsetWeight = 1f;
@@ -91,5 +92,9 @@ namespace UniversalForwardPlusVolumetric
 
         [Tooltip("Controls the history weight. Lower values reduce the afterimage effect but also decrease the smoothness of light blending. The default value is 7.")]
         [Range(1, 7)] public int blendWeight = 7;
+
+        [Tooltip("Which render pass to render at. The default is BeforeRenderingPostProcessing")]
+        public RenderPassEvent renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
+
     }
 }

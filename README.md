@@ -14,14 +14,16 @@ This package is available on URP Forward+ from 2022.3.0f1 (2022 LTS) version.
 |RenderGraph Implementation|X|X|O|
 
 ## How to Use
-1. Add 'FPVolumetricFog' renderer feature to Renderer data (Make sure to use Forward+).
-2. Add a Global Volume to the scene and create or assign a Volume Profile.
-3. Add the 'Lighting/FPVolumetricFog' override to that profile.
+1. Add `FPVolumetricFog` renderer feature to Renderer data (Make sure to use Forward+).
+2. Add a `Global Volume` to the scene and create or assign a Volume Profile.
+3. Add the `Lighting/FPVolumetricFog` override to that profile.
 4. Enable the Enabled override and tune the fog from the Volume component.
 
+### Migration
 Existing Volumetric Config assets are kept only as deprecated references so you can manually copy their values into the Volume override.
 
-NOTE - If you use Unity 6 LTS and the rendering result is not as expected, change `Shader Precision Model` setting in `Project Settings > Player > Other Settings > Shader Settings`.
+### NOTE
+If you use Unity 6 LTS and the rendering result is not as expected, change `Shader Precision Model` setting in `Project Settings > Player > Other Settings > Shader Settings`.
 
 ![How To Use](./Documentation~/Images/HowToUse.png) 
 

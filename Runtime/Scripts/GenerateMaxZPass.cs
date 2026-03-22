@@ -23,10 +23,10 @@ namespace UniversalForwardPlusVolumetric
             m_PassData = new GenerateMaxZMaskPassData();
         }
 
-        public void Setup(VolumetricConfig config, in VBufferParameters vBufferParameters)
+        internal void Setup(VolumetricFogResources resources, in VBufferParameters vBufferParameters)
         {
             m_VBufferParameters = vBufferParameters;
-            m_PassData.generateMaxZCS = config.generateMaxZCS;
+            m_PassData.generateMaxZCS = resources.generateMaxZCS;
             m_ProfilingSampler = new ProfilingSampler("Generate MaxZ");
         }
 
@@ -44,7 +44,7 @@ namespace UniversalForwardPlusVolumetric
         {
             if (m_PassData.generateMaxZCS == null)
                 return;
-            
+
             CoreUtils.SetKeyword(m_PassData.generateMaxZCS, "PLANAR_OBLIQUE_DEPTH", false);
 
             m_PassData.maxZKernel = m_PassData.generateMaxZCS.FindKernel("ComputeMaxZ");
@@ -55,7 +55,7 @@ namespace UniversalForwardPlusVolumetric
             Vector2Int intermediateMaskSize = new Vector2Int();
             Vector2Int finalMaskSize = new Vector2Int();
             Vector2Int targetSize = new Vector2Int((int)(camera.scaledPixelWidth * renderingData.cameraData.renderScale), (int)(camera.scaledPixelHeight * renderingData.cameraData.renderScale));
-            
+
             intermediateMaskSize.x = VolumetricUtils.DivRoundUp(targetSize.x, 8);
             intermediateMaskSize.y = VolumetricUtils.DivRoundUp(targetSize.y, 8);
             finalMaskSize.x = intermediateMaskSize.x / 2;
@@ -65,7 +65,7 @@ namespace UniversalForwardPlusVolumetric
             m_PassData.finalMaskSize = finalMaskSize;
 
             var currentParams = m_VBufferParameters;
-            float ratio = (float)currentParams.viewportSize.x / (float)targetSize.x;
+            float ratio = (float)currentParams.viewportSize.x / targetSize.x;
             m_PassData.dilationWidth = ratio < 0.1f ? 2 : ratio < 0.5f ? 1 : 0;
             m_PassData.viewCount = 1;
 
@@ -74,12 +74,12 @@ namespace UniversalForwardPlusVolumetric
             desc.dimension = TextureDimension.Tex2D;
             desc.useDynamicScale = true;
             desc.enableRandomWrite = true;
-            RenderingUtils.ReAllocateIfNeeded(ref m_MaxZ8xBufferHandle, desc, FilterMode.Bilinear, name:"MaxZ mask 8x");
-            RenderingUtils.ReAllocateIfNeeded(ref m_MaxZBufferHandle, desc, FilterMode.Bilinear, name:"MaxZ mask");
+            RenderingUtils.ReAllocateIfNeeded(ref m_MaxZ8xBufferHandle, desc, FilterMode.Bilinear, name: "MaxZ mask 8x");
+            RenderingUtils.ReAllocateIfNeeded(ref m_MaxZBufferHandle, desc, FilterMode.Bilinear, name: "MaxZ mask");
 
             desc.width = Mathf.CeilToInt(targetSize.x / 16.0f);
             desc.height = Mathf.CeilToInt(targetSize.y / 16.0f);
-            RenderingUtils.ReAllocateIfNeeded(ref m_DilatedMaxZBufferHandle, desc, FilterMode.Bilinear, name:"Dilated MaxZ mask");
+            RenderingUtils.ReAllocateIfNeeded(ref m_DilatedMaxZBufferHandle, desc, FilterMode.Bilinear, name: "Dilated MaxZ mask");
         }
 
 #if UNITY_6000_0_OR_NEWER
@@ -128,7 +128,7 @@ namespace UniversalForwardPlusVolumetric
                 dispatchY = VolumetricUtils.DivRoundUp(finalMaskH, 8);
 
                 cmd.DispatchCompute(cs, kernel, dispatchX, dispatchY, data.viewCount);
-
+                
 
                 // --------------------------------------------------------------
                 // Dilate max Z and gradient.
@@ -163,8 +163,6 @@ namespace UniversalForwardPlusVolumetric
 
             public Vector2Int intermediateMaskSize;
             public Vector2Int finalMaskSize;
-            // public Vector2Int minDepthMipOffset;
-
             public float dilationWidth;
             public int viewCount;
         }
@@ -204,7 +202,7 @@ namespace UniversalForwardPlusVolumetric
                 passData.finalMaskSize = finalMaskSize;
 
                 var currentParams = m_VBufferParameters;
-                float ratio = (float)currentParams.viewportSize.x / (float)targetSize.x;
+                float ratio = (float)currentParams.viewportSize.x / targetSize.x;
                 passData.dilationWidth = ratio < 0.1f ? 2 : ratio < 0.5f ? 1 : 0;
                 passData.viewCount = 1;
 

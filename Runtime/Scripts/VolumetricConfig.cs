@@ -1,5 +1,4 @@
-using System.Collections;
-using System.Collections.Generic;
+using System;
 using UnityEngine;
 
 namespace UniversalForwardPlusVolumetric
@@ -20,7 +19,7 @@ namespace UniversalForwardPlusVolumetric
         Both
     }
 
-    [CreateAssetMenu(menuName = "UniversalVolumetric/VolumetricFogConfig")]
+    [Obsolete("VolumetricConfig is deprecated. Move these values to a Global Volume with the FPVolumetricFog override.", false)]
     public class VolumetricConfig : ScriptableObject
     {
         [Header("Resources")]
@@ -52,7 +51,7 @@ namespace UniversalForwardPlusVolumetric
         // Height Fog
         public float baseHeight;
         public float maximumHeight = 1000f;
-        [Range(1f, 400f)]
+        [Range(1f, 1000f)]
         public float fogAttenuationDistance = 50f;
 
         [Header("Volumetric Lighting")]
@@ -77,9 +76,9 @@ namespace UniversalForwardPlusVolumetric
         public int volumeSliceCount = 128;
 
         public DenoiseMode denoiseMode = DenoiseMode.Both;
-        public bool filterVolume => (denoiseMode == DenoiseMode.Gaussian || denoiseMode == DenoiseMode.Both);
-        public bool enableReprojection => (denoiseMode == DenoiseMode.Reprojection || denoiseMode == DenoiseMode.Both);
-        
+        public bool filterVolume => denoiseMode == DenoiseMode.Gaussian || denoiseMode == DenoiseMode.Both;
+        public bool enableReprojection => denoiseMode == DenoiseMode.Reprojection || denoiseMode == DenoiseMode.Both;
+
         [Header("Volumetric Lighting - Advanced")]
         [Range(0.001f, 1f)]
         public float sampleOffsetWeight = 1f;

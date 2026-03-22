@@ -129,22 +129,22 @@ namespace UniversalForwardPlusVolumetric
         private const float k_OptimalFogScreenResolutionPercentage = (1.0f / 8.0f) * 100;
         public static int DivRoundUp(int x, int y) => (x + y - 1) / y;
 
-        public static void ComputeVolumetricFogSliceCountAndScreenFraction(VolumetricConfig config, out int sliceCount, out float screenFraction)
+        internal static void ComputeVolumetricFogSliceCountAndScreenFraction(VolumetricFogSettings settings, out int sliceCount, out float screenFraction)
         {
-            screenFraction = config.screenResolutionPercentage * 0.01f;
-            sliceCount = config.volumeSliceCount;
+            screenFraction = settings.screenResolutionPercentage * 0.01f;
+            sliceCount = settings.volumeSliceCount;
         }
 
-        public static Vector3Int ComputeVolumetricViewportSize(VolumetricConfig config, Camera camera, float renderScale, ref float voxelSize)
+        internal static Vector3Int ComputeVolumetricViewportSize(VolumetricFogSettings settings, Camera camera, float renderScale, ref float voxelSize)
         {
             int viewportWidth = (int)(camera.scaledPixelWidth * renderScale);
             int viewportHeight = (int)(camera.scaledPixelHeight * renderScale);
 
-            ComputeVolumetricFogSliceCountAndScreenFraction(config, out var sliceCount, out var screenFraction);
-            if (config.screenResolutionPercentage == k_OptimalFogScreenResolutionPercentage)
+            ComputeVolumetricFogSliceCountAndScreenFraction(settings, out var sliceCount, out var screenFraction);
+            if (settings.screenResolutionPercentage == k_OptimalFogScreenResolutionPercentage)
                 voxelSize = 8;
             else
-                voxelSize = 1.0f / screenFraction; // Does not account for rounding (same function, above)
+                voxelSize = 1.0f / screenFraction;
 
             int w = Mathf.RoundToInt(viewportWidth * screenFraction);
             int h = Mathf.RoundToInt(viewportHeight * screenFraction);
@@ -157,17 +157,17 @@ namespace UniversalForwardPlusVolumetric
             return new Vector3Int(w, h, d);
         }
 
-        public static VBufferParameters ComputeVolumetricBufferParameters(VolumetricConfig config, Camera camera, float renderScale)
+        internal static VBufferParameters ComputeVolumetricBufferParameters(VolumetricFogSettings settings, Camera camera, float renderScale)
         {
             float voxelSize = 0;
-            Vector3Int viewportSize = ComputeVolumetricViewportSize(config, camera, renderScale, ref voxelSize);
+            Vector3Int viewportSize = ComputeVolumetricViewportSize(settings, camera, renderScale, ref voxelSize);
 
             return new VBufferParameters(viewportSize,
-                                        config.depthExtent,
+                                        settings.depthExtent,
                                         camera,
-                                        config.sliceDistributionUniformity,
+                                        settings.sliceDistributionUniformity,
                                         voxelSize,
-                                        config.autoSliceDistribution);
+                                        settings.autoSliceDistribution);
         }
 
         public static float ComputZPlaneTexelSpacing(float planeDepth, float verticalFoV, float resolutionY)

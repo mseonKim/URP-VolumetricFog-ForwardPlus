@@ -4,7 +4,7 @@
 
 This repository is copied from Unity HDRP Volumetric Fog.
 
-Note that this feature is working as a global fog volume while HDRP requires local volumes.
+This package is controlled through a Global Volume override while HDRP requires its own fog volume workflow.
 
 This package is available on URP Forward+ from 2022.3.0f1 (2022 LTS) version.
 
@@ -14,9 +14,12 @@ This package is available on URP Forward+ from 2022.3.0f1 (2022 LTS) version.
 |RenderGraph Implementation|X|X|O|
 
 ## How to Use
-1. Add 'FP Volumetric Fog' renderer feature to Renderer data (Make sure to use Forward+)
-2. Create 'Volumetric Config' via 'Create/UniversalVolumetric/VolumetricFogConfig'
-3. Link the config asset to the renderer feature
+1. Add 'FPVolumetricFog' renderer feature to Renderer data (Make sure to use Forward+).
+2. Add a Global Volume to the scene and create or assign a Volume Profile.
+3. Add the 'Lighting/FPVolumetricFog' override to that profile.
+4. Enable the Enabled override and tune the fog from the Volume component.
+
+Existing Volumetric Config assets are kept only as deprecated references so you can manually copy their values into the Volume override.
 
 NOTE - If you use Unity 6 LTS and the rendering result is not as expected, change `Shader Precision Model` setting in `Project Settings > Player > Other Settings > Shader Settings`.
 

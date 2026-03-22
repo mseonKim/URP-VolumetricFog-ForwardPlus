@@ -17,9 +17,9 @@ namespace UniversalForwardPlusVolumetric
         private VBufferParameters m_VBufferParameters;
         private ProfilingSampler m_ProfilingSampler;
 
-        public GenerateMaxZPass()
+        public GenerateMaxZPass(RenderPassEvent renderPassEvent)
         {
-            renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
+            this.renderPassEvent = renderPassEvent;
             m_PassData = new GenerateMaxZMaskPassData();
         }
 

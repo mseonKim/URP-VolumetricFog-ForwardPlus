@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 namespace UniversalForwardPlusVolumetric
 {
@@ -90,5 +91,9 @@ namespace UniversalForwardPlusVolumetric
 
         [Tooltip("Controls the history weight. Lower values reduce the afterimage effect but also decrease the smoothness of light blending. The default value is 7.")]
         [Range(1, 7)] public int blendWeight = 7;
+
+        [Tooltip("Which render pass to render at. The default is BeforeRenderingPostProcessing")]
+        public RenderPassEvent renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
+
     }
 }

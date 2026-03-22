@@ -11,6 +11,8 @@ namespace UniversalForwardPlusVolumetric
     {
         private const string k_LogPrefix = "[UniversalFPVolumetricFog]";
 
+        [Tooltip("Which render pass to render at. The default is BeforeRenderingPostProcessing")]
+        public RenderPassEvent renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
         [SerializeField] private VolumetricFogResources resources;
 
         private GenerateMaxZPass m_GenerateMaxZPass;
@@ -21,8 +23,8 @@ namespace UniversalForwardPlusVolumetric
         public override void Create()
         {
             EnsureResources();
-            m_GenerateMaxZPass = new GenerateMaxZPass();
-            m_VolumetricLightingPass = new FPVolumetricLightingPass();
+            m_GenerateMaxZPass = new GenerateMaxZPass(renderPassEvent);
+            m_VolumetricLightingPass = new FPVolumetricLightingPass(renderPassEvent);
         }
 
 #if UNITY_EDITOR

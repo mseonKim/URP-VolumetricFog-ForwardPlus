@@ -61,8 +61,6 @@ namespace UniversalForwardPlusVolumetric
 
         [Range(1f, 1000f)]
         public MinFloatParameter fogAttenuationDistance = new MinFloatParameter(50f, 1f);
-
-        public BoolParameter volumetricLighting = new BoolParameter(true);
         public BoolParameter enableDirectionalLight = new BoolParameter(true);
 
         [Tooltip("Point and spot lights are only supported for Forward+.")]
@@ -107,7 +105,7 @@ namespace UniversalForwardPlusVolumetric
                 baseHeight = baseHeight.value,
                 maximumHeight = maximumHeight.value,
                 fogAttenuationDistance = fogAttenuationDistance.value,
-                volumetricLighting = volumetricLighting.value,
+                volumetricLighting = true,
                 enableDirectionalLight = enableDirectionalLight.value,
                 enablePointAndSpotLight = enablePointAndSpotLight.value,
                 albedo = albedo.value,

@@ -39,7 +39,7 @@ namespace UniversalForwardPlusVolumetric
 
         public bool filterVolume => denoiseMode == DenoiseMode.Gaussian || denoiseMode == DenoiseMode.Both;
         public bool enableReprojection => denoiseMode == DenoiseMode.Reprojection || denoiseMode == DenoiseMode.Both;
-        public bool IsActiveForRendering => enabled && volumetricLighting;
+        public bool IsActiveForRendering => enabled;
 
         public static VolumetricFogSettings Default => new VolumetricFogSettings
         {
@@ -76,7 +76,6 @@ namespace UniversalForwardPlusVolumetric
             {
                 int hash = 17;
                 hash = hash * 31 + enabled.GetHashCode();
-                hash = hash * 31 + volumetricLighting.GetHashCode();
                 hash = hash * 31 + denoiseMode.GetHashCode();
                 hash = hash * 31 + depthExtent.GetHashCode();
                 hash = hash * 31 + screenResolutionPercentage.GetHashCode();

@@ -30,8 +30,6 @@ namespace UniversalForwardPlusVolumetric.Editor
         private SerializedDataParameter m_BaseHeight;
         private SerializedDataParameter m_MaximumHeight;
         private SerializedDataParameter m_FogAttenuationDistance;
-
-        private SerializedDataParameter m_VolumetricLighting;
         private SerializedDataParameter m_EnableDirectionalLight;
         private SerializedDataParameter m_EnablePointAndSpotLight;
         private SerializedDataParameter m_Albedo;
@@ -67,8 +65,6 @@ namespace UniversalForwardPlusVolumetric.Editor
             m_BaseHeight = Unpack(o.Find(x => x.baseHeight));
             m_MaximumHeight = Unpack(o.Find(x => x.maximumHeight));
             m_FogAttenuationDistance = Unpack(o.Find(x => x.fogAttenuationDistance));
-
-            m_VolumetricLighting = Unpack(o.Find(x => x.volumetricLighting));
             m_EnableDirectionalLight = Unpack(o.Find(x => x.enableDirectionalLight));
             m_EnablePointAndSpotLight = Unpack(o.Find(x => x.enablePointAndSpotLight));
             m_Albedo = Unpack(o.Find(x => x.albedo));
@@ -122,7 +118,6 @@ namespace UniversalForwardPlusVolumetric.Editor
             PropertyField(m_FogAttenuationDistance);
 
             DrawSectionHeader("Volumetric Lighting");
-            PropertyField(m_VolumetricLighting);
             PropertyField(m_EnableDirectionalLight);
             PropertyField(m_EnablePointAndSpotLight);
             PropertyField(m_Albedo);

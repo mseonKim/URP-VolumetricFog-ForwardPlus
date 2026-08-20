@@ -25,8 +25,8 @@ namespace UniversalForwardPlusVolumetric
 
     [Serializable]
     [VolumeComponentMenu("Lighting/FPVolumetricFog")]
-    [VolumeRequiresRendererFeatures(typeof(FPVolumetricFog))]
 #if UNITY_6000_0_OR_NEWER
+    [VolumeRequiresRendererFeatures(typeof(FPVolumetricFog))]
     [SupportedOnRenderPipeline(typeof(UniversalRenderPipelineAsset))]
 #endif
     public sealed class FPVolumetricFogVolume : VolumeComponent

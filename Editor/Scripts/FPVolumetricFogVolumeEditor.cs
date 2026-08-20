@@ -6,7 +6,7 @@ using UnityEngine;
 namespace UniversalForwardPlusVolumetric.Editor
 {
     [CustomEditor(typeof(FPVolumetricFogVolume))]
-    public sealed class FPVolumetricFogVolumeEditor : UniversalRenderPipelineVolumeComponentEditor
+    public sealed class FPVolumetricFogVolumeEditor : VolumeComponentEditor
     {
         private enum VolumetricLightingQuality
         {

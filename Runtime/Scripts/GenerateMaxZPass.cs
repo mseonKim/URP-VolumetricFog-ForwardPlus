@@ -37,6 +37,7 @@ namespace UniversalForwardPlusVolumetric
             m_DilatedMaxZBufferHandle?.Release();
         }
 
+#if !UNITY_6000_7_OR_NEWER
 #if UNITY_6000_0_OR_NEWER
         [Obsolete]
 #endif
@@ -149,6 +150,7 @@ namespace UniversalForwardPlusVolumetric
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
         }
+#endif
 
         public override void OnCameraCleanup(CommandBuffer cmd)
         {
